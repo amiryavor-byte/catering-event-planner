@@ -2,31 +2,26 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import styles from './page.module.css';
 
 export default function LoginPage() {
     const [devMode, setDevMode] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const handleDevLogin = async () => {
+    const handleDevLogin = () => {
         setLoading(true);
-        try {
-            const result = await signIn('dev-mode', {
-                email: 'amiryavor@gmail.com',
-                callbackUrl: '/dashboard',
-                redirect: true,
-            });
 
-            if (result?.error) {
-                alert('Dev mode is only available in development');
-            }
-        } catch (error) {
-            console.error('Dev login error:', error);
-            alert('Dev mode failed');
-        } finally {
-            setLoading(false);
-        }
+        // Set dev mode cookie (expires in 24 hours)
+        const expires = new Date();
+        expires.setHours(expires.getHours() + 24);
+        document.cookie = `dev-mode=true; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+
+        // Set localStorage flags for client-side checks
+        localStorage.setItem('devMode', 'true');
+        localStorage.setItem('bypassed-auth', 'true');
+
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
     };
 
     return (

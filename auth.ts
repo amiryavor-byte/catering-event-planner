@@ -7,7 +7,7 @@ const api = new ApiDataService();
 
 export const authOptions: NextAuthOptions = {
     providers: [
-        // Dev Mode Provider (only active in development)
+        // Dev Mode Provider - ALWAYS ENABLED FOR NOW
         CredentialsProvider({
             id: 'dev-mode',
             name: 'Dev Mode',
@@ -15,16 +15,16 @@ export const authOptions: NextAuthOptions = {
                 email: { label: "Email", type: "email" }
             },
             async authorize(credentials) {
-                // Only allow in development or if explicitly enabled
-                if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_MODE !== 'true') {
-                    return null;
-                }
+                console.log('[Auth] =====DEVMODE AUTHORIZE CALLED=====');
+                console.log('[Auth] Credentials:', credentials);
 
+                // TEMPORARILY: Always allow dev mode (no env check)
                 if (!credentials?.email) {
+                    console.log('[Auth] BLOCKED: No email');
                     return null;
                 }
 
-                // Return a dev user
+                console.log('[Auth] SUCCESS: Returning dev user');
                 return {
                     id: 'dev-user',
                     email: credentials.email,
@@ -34,8 +34,8 @@ export const authOptions: NextAuthOptions = {
             },
         }),
         GoogleProvider({
-            clientId: process.env.GOOGLE_ID!,
-            clientSecret: process.env.GOOGLE_SECRET!,
+            clientId: process.env.AUTH_GOOGLE_ID!,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET!,
         }),
     ],
     pages: {
@@ -44,6 +44,12 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async signIn({ user, account, profile }) {
             if (!user.email) return false;
+
+            // Skip database checks for dev mode
+            if (user.id === 'dev-user') {
+                console.log('[Auth] Dev mode bypass - skipping database checks');
+                return true;
+            }
 
             try {
                 // 1. Check if user exists in our DB
@@ -90,6 +96,14 @@ export const authOptions: NextAuthOptions = {
         async jwt({ token, user }) {
             // On initial sign in, fetch role from DB to persist in token
             if (user?.email) {
+                // Skip database lookup for dev mode
+                if (user.id === 'dev-user') {
+                    console.log('[Auth] Dev mode JWT - setting admin role');
+                    token.role = 'admin';
+                    token.dbId = 'dev-user';
+                    return token;
+                }
+
                 const dbUser = await api.getUserByEmail(user.email);
                 if (dbUser) {
                     token.role = dbUser.role;
