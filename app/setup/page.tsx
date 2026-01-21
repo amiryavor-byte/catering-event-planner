@@ -24,7 +24,8 @@ export default function SetupPage() {
     const [staffFile, setStaffFile] = useState<File | null>(null);
 
     // Step 3 - Menu Import
-    const [menuResult, setMenuResult] = useState<{ itemsFound: number } | null>(null);
+    const [menuResult, setMenuResult] = useState<{ itemsFound: number, tasksCreated?: number } | null>(null);
+    const [menuFile, setMenuFile] = useState<File | null>(null);
 
     async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -112,13 +113,28 @@ export default function SetupPage() {
 
     async function handleMenuUpload(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
+        if (!menuFile) {
+            alert('Please select a menu file to upload');
+            return;
+        }
+
         setLoading(true);
-        const formData = new FormData(e.currentTarget);
+        const formData = new FormData();
+        formData.append('file', menuFile);
         const res = await parseMenuFile(formData);
         setLoading(false);
 
         if (res.success) {
-            setMenuResult({ itemsFound: res.itemsFound || 0 });
+            setMenuResult({ itemsFound: res.itemsFound || 0, tasksCreated: res.tasksCreated || 0 });
+        } else {
+            alert('Failed to parse menu: ' + res.error);
+        }
+    }
+
+    function handleMenuFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (file) {
+            setMenuFile(file);
         }
     }
 
@@ -313,13 +329,74 @@ export default function SetupPage() {
 
                 {step === 3 && (
                     <div className="space-y-6">
-                        <h2 className="text-xl text-white font-semibold">Import Menus</h2>
-                        <p className="text-slate-400 text-sm">Upload PDF menus. AI will extract dishes and ingredients.</p>
-
-                        <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center bg-white/5">
-                            <p className="text-slate-500">📄 Menu Parsing Module</p>
-                            <p className="text-slate-600 text-xs mt-2">(Coming in next update)</p>
+                        <div className="flex items-center gap-2">
+                            <Upload className="text-primary" size={24} />
+                            <h2 className="text-xl text-white font-semibold">Import Menus</h2>
                         </div>
+                        <p className="text-slate-400 text-sm">Upload PDF menus or menu images. AI will extract dishes, categories, and predict ingredients.</p>
+
+                        {!menuResult ? (
+                            <form onSubmit={handleMenuUpload} className="space-y-4">
+                                <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-primary transition-colors cursor-pointer bg-white/5">
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        id="menu-file"
+                                        accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
+                                        onChange={handleMenuFileChange}
+                                    />
+                                    <label htmlFor="menu-file" className="cursor-pointer flex flex-col items-center gap-2">
+                                        <Upload className="text-slate-400" size={32} />
+                                        <span className="text-white font-medium">
+                                            {menuFile ? menuFile.name : 'Click to Upload Menu'}
+                                        </span>
+                                        <span className="text-slate-500 text-xs">Supports PDF, PNG, JPG, WebP</span>
+                                    </label>
+                                </div>
+
+                                {menuFile && (
+                                    <button
+                                        type="submit"
+                                        className="btn-primary w-full"
+                                        disabled={loading}
+                                    >
+                                        {loading ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Loader2 className="animate-spin" size={16} />
+                                                AI Analyzing Menu...
+                                            </span>
+                                        ) : (
+                                            'Extract Menu Items'
+                                        )}
+                                    </button>
+                                )}
+                            </form>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="bg-success/10 border border-success/20 rounded-lg p-4 flex gap-4 items-start">
+                                    <Check className="text-success mt-1" size={20} />
+                                    <div>
+                                        <p className="text-white font-medium">Menu Extracted Successfully!</p>
+                                        <p className="text-slate-300 text-sm">Found {menuResult.itemsFound} menu items.</p>
+                                        {menuResult.tasksCreated && menuResult.tasksCreated > 0 && (
+                                            <p className="text-primary text-sm mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} /> {menuResult.tasksCreated} tasks created to add predicted ingredients to inventory.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => {
+                                        setMenuFile(null);
+                                        setMenuResult(null);
+                                    }}
+                                    className="text-primary hover:text-primary/80 text-sm transition-colors"
+                                >
+                                    + Parse Another Menu
+                                </button>
+                            </div>
+                        )}
 
                         <div className="flex gap-4 pt-4">
                             <button
@@ -334,7 +411,7 @@ export default function SetupPage() {
                             >
                                 <span className="flex items-center justify-center gap-2">
                                     <Check size={16} />
-                                    Finish Setup
+                                    {menuResult ? 'Finish Setup' : 'Skip & Finish'}
                                 </span>
                             </button>
                         </div>

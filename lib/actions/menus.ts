@@ -8,6 +8,12 @@ export async function getMenuItems() {
     return await service.getMenuItems();
 }
 
+export async function getMenuItemById(id: number) {
+    const service = getDataService();
+    const items = await service.getMenuItems();
+    return items.find(item => item.id === id);
+}
+
 export async function addMenuItem(formData: FormData) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
@@ -30,6 +36,14 @@ export async function getRecipe(menuId: number) {
     return await service.getRecipe(menuId);
 }
 
+export async function getRecipeWithDetails(menuId: number) {
+    const service = getDataService();
+    const recipeItems = await service.getRecipe(menuId);
+
+    // Recipe items should already have joined ingredient data from the service
+    return recipeItems;
+}
+
 export async function addRecipeItem(formData: FormData) {
     const service = getDataService();
     const menuItemId = parseInt(formData.get('menuItemId') as string);
@@ -40,3 +54,4 @@ export async function addRecipeItem(formData: FormData) {
     revalidatePath(`/dashboard/menus/${menuItemId}`);
     revalidatePath('/dashboard/menus');
 }
+

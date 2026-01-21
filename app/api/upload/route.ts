@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         // Validate file type
         const allowedTypes: Record<string, string[]> = {
             logo: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
-            menu: ['application/pdf'],
+            menu: ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
             staff: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         };
 
