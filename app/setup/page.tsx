@@ -5,6 +5,7 @@ import { parseStaffList, parseMenuFile } from '@/lib/actions/setup';
 import { saveCompanySettings, getCompanySettings, type CompanySettings } from '@/lib/actions/company';
 import { Upload, Check, AlertCircle, Loader2, Building2, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
+import { useEffect } from 'react';
 
 export default function SetupPage() {
     const [step, setStep] = useState(1);
@@ -26,6 +27,41 @@ export default function SetupPage() {
     // Step 3 - Menu Import
     const [menuResult, setMenuResult] = useState<{ itemsFound: number, tasksCreated?: number } | null>(null);
     const [menuFile, setMenuFile] = useState<File | null>(null);
+
+    // Migration Effect
+    const [migrationChecked, setMigrationChecked] = useState(false);
+
+    useEffect(() => {
+        async function checkAndMigrate() {
+            if (migrationChecked) return;
+
+            // 1. Try to get from API
+            const apiSettings = await getCompanySettings();
+
+            if (apiSettings) {
+                setCompanySettings(apiSettings);
+                setMigrationChecked(true);
+            } else {
+                // 2. If API empty, check localStorage
+                const stored = localStorage.getItem('companySettings');
+                if (stored) {
+                    try {
+                        const localSettings = JSON.parse(stored);
+                        console.log('Migrating localStorage to API...', localSettings);
+                        // 3. Migrate
+                        await saveCompanySettings(localSettings);
+                        setCompanySettings(localSettings);
+                        // Optional: Clear localStorage after successful migration
+                        // localStorage.removeItem('companySettings'); 
+                    } catch (e) {
+                        console.error('Migration failed', e);
+                    }
+                }
+                setMigrationChecked(true);
+            }
+        }
+        checkAndMigrate();
+    }, [migrationChecked]);
 
     async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
@@ -67,14 +103,14 @@ export default function SetupPage() {
         }
     }
 
-    function handleStep1Next() {
+    async function handleStep1Next() {
         if (!companySettings.name.trim()) {
             alert('Please enter your company name');
             return;
         }
 
         setLoading(true);
-        const result = saveCompanySettings(companySettings);
+        const result = await saveCompanySettings(companySettings);
         setLoading(false);
 
         if (result.success) {
@@ -139,8 +175,8 @@ export default function SetupPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 p-6">
-            <div className="glass-panel w-full max-w-2xl p-10 animate-in fade-in zoom-in duration-500">
+        <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 p-4 md:p-6">
+            <div className="glass-panel w-full max-w-2xl p-6 md:p-10 animate-in fade-in zoom-in duration-500">
 
                 <div className="flex items-center justify-between mb-8">
                     <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">

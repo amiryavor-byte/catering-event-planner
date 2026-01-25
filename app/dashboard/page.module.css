@@ -55,4 +55,32 @@
     .contentGrid {
         grid-template-columns: 1fr;
     }
+
+    /* Stats grid: 2 columns on tablet */
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    /* Stats grid: 1 column on mobile */
+    .statsGrid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .mainChart,
+    .sideList {
+        min-height: auto;
+    }
+
+    .activityItem {
+        padding-bottom: 1rem;
+    }
 }

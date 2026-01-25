@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
     CalendarDays,
@@ -6,6 +8,7 @@ import {
     LogOut,
     UserCheck
 } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 import styles from '@/components/Sidebar.module.css'; // Re-use styles
 
 export default function StaffSidebar() {
@@ -37,7 +40,7 @@ export default function StaffSidebar() {
             </nav>
 
             <div className={styles.footer}>
-                <button className={styles.logoutBtn}>
+                <button className={styles.logoutBtn} onClick={() => signOut({ callbackUrl: '/login' })}>
                     <LogOut size={20} />
                     <span>Sign Out</span>
                 </button>

@@ -1,14 +1,313 @@
+/* Base Sidebar - Default Vertical */
 .sidebar {
     width: 280px;
     height: 100vh;
-    background: var(--surface);
-    border-right: 1px solid var(--surface-highlight);
+    background: var(--heavy-glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid var(--glass-border);
     display: flex;
     flex-direction: column;
     position: fixed;
-    left: 0;
-    top: 0;
     z-index: 50;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        width 0.3s ease,
+        height 0.3s ease,
+        border-radius 0.3s ease;
+    user-select: none;
+    /* Prevent text selection while dragging */
+}
+
+/* --- Floating & Dragging Mode --- */
+.floating {
+    height: fit-content;
+    max-height: 85vh;
+    width: 280px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(15, 23, 42, 0.95);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(99, 102, 241, 0.2);
+    border-radius: 24px;
+    overflow: hidden;
+    padding-bottom: 1rem;
+}
+
+.dragging {
+    opacity: 0.9;
+    scale: 0.98;
+    cursor: grabbing;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.9),
+        0 0 30px rgba(99, 102, 241, 0.4);
+    border-color: var(--primary);
+    z-index: 1000;
+}
+
+/* --- Horizontal Modes (Top/Bottom) --- */
+.horizontal {
+    width: 100vw;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    border-right: none;
+    border-bottom: 1px solid var(--glass-border);
+    padding: 0 1rem;
+}
+
+.horizontal.bottom {
+    border-bottom: none;
+    border-top: 1px solid var(--glass-border);
+}
+
+/* Adjust internal components for horizontal */
+.horizontal .nav {
+    flex-direction: row;
+    overflow: visible;
+    /* Allow popovers to break out */
+    padding: 0.5rem;
+    gap: 1rem;
+    align-items: center;
+}
+
+.horizontal .logoContainer {
+    border-bottom: none;
+    padding: 0.5rem 1rem;
+    border-right: 1px solid var(--surface-highlight);
+}
+
+.horizontal .navSection {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.horizontal .sectionTitle {
+    display: none;
+    /* Hide section titles in compact horizontal bar */
+}
+
+.horizontal .footer {
+    border-top: none;
+    border-left: 1px solid var(--surface-highlight);
+    padding: 0.5rem 1rem;
+}
+
+/* Drag Handle Logic */
+.dragHandle {
+    cursor: grab;
+}
+
+.dragHandle:active {
+    cursor: grabbing;
+}
+
+/* --- Snap & Prompt UI --- */
+.snapGhost {
+    position: fixed;
+    background: rgba(99, 102, 241, 0.2);
+    border: 2px dashed var(--primary);
+    border-radius: 12px;
+    pointer-events: none;
+    z-index: 49;
+    transition: all 0.2s ease;
+}
+
+.sectionToggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.sectionToggle:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
+.sectionToggleActive {
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.chevron {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+    opacity: 0.5;
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+}
+
+/* Unified Popover specific when horizontal */
+.horizontal .popover {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translate(-50%, 100%);
+    background: rgba(15, 23, 42, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    min-width: 220px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.horizontal .popoverRight {
+    left: auto;
+    right: 0;
+    transform: translate(0, 100%);
+}
+
+.horizontal.bottom .popover {
+    bottom: auto;
+    top: -10px;
+    transform: translate(-50%, -100%);
+}
+
+.horizontal.bottom .popoverRight {
+    left: auto;
+    right: 0;
+    transform: translate(0, -100%);
+}
+
+.sectionLinks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.horizontal .sectionLinks {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.horizontal .navSection {
+    position: relative;
+    padding: 0 0.5rem;
+}
+
+.horizontal .sectionToggle {
+    margin-bottom: 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    width: auto;
+}
+
+.horizontal .sectionToggle span {
+    display: inline-block;
+    /* Show text in horizontal toolbar for clarity if section headers are popovers */
+}
+
+@media (min-width: 1400px) {
+    .horizontal .managementBtn span {
+        display: block;
+    }
+}
+
+.horizontal .navItem {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.horizontal .navItem span {
+    display: none;
+}
+
+@media (min-width: 1200px) {
+    .horizontal .navItem span {
+        display: block;
+    }
+}
+
+/* Drag Handle Enhancement */
+.logoContainer.dragHandle:hover {
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+.logoContainer.dragHandle:active {
+    cursor: grabbing;
+}
+
+/* Keep existing styles below... or merge carefully */
+
+/* Mobile Overlay Styles (< 1024px) */
+/* Only apply transform logic if NOT floating/custom mode */
+@media (max-width: 1023px) {
+    .sidebar:not(.floating):not(.horizontal) {
+        transform: translateX(-100%);
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+        left: 0;
+        top: 0;
+        bottom: 0;
+    }
+
+    .sidebarOpen:not(.floating):not(.horizontal) {
+        transform: translateX(0);
+    }
+}
+
+/* Desktop Styles (>= 1024px) */
+@media (min-width: 1024px) {
+    .sidebar:not(.floating):not(.horizontal) {
+        transform: translateX(0);
+    }
+}
+
+.backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.backdropVisible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.closeBtn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1rem;
+    background: transparent;
+    border: 1px solid var(--surface-highlight);
+    color: var(--text-muted);
+    padding: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: none;
+    /* Hidden on desktop usually */
+}
+
+@media (max-width: 1023px) {
+    .closeBtn {
+        display: flex;
+        /* Kept for mobile overlay mode */
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 .logoContainer {
@@ -67,6 +366,8 @@
     border-radius: 12px;
     transition: all 0.2s ease;
     font-weight: 500;
+    white-space: nowrap;
+    /* Prevent wrapping in horiz mode */
 }
 
 .navItem:hover {
@@ -75,12 +376,26 @@
     transform: translateX(4px);
 }
 
+/* Disable hover transform in horizontal mode as it looks weird */
+.horizontal .navItem:hover {
+    transform: translateY(-2px);
+}
+
 .active {
     background: linear-gradient(90deg, rgba(99, 102, 241, 0.1), transparent);
     color: var(--primary);
     border-left: 3px solid var(--primary);
     border-radius: 0 12px 12px 0;
 }
+
+/* Horizontal active state */
+.horizontal .active {
+    border-left: none;
+    border-bottom: 3px solid var(--primary);
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.1), transparent);
+}
+
 
 .footer {
     padding: 1.5rem;
@@ -99,6 +414,7 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .logoutBtn:hover {

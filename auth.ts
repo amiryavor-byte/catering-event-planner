@@ -12,24 +12,31 @@ export const authOptions: NextAuthOptions = {
             id: 'dev-mode',
             name: 'Dev Mode',
             credentials: {
-                email: { label: "Email", type: "email" }
+                email: { label: "Email", type: "email" },
+                password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
-                console.log('[Auth] =====DEVMODE AUTHORIZE CALLED=====');
-                console.log('[Auth] Credentials:', credentials);
+                console.log('[Auth] Authorize called');
 
-                // TEMPORARILY: Always allow dev mode (no env check)
-                if (!credentials?.email) {
-                    console.log('[Auth] BLOCKED: No email');
-                    return null;
+                if (!credentials?.email) return null;
+
+                const normalizedEmail = credentials.email.toLowerCase();
+                // Special handling for requested Admin user
+                if (normalizedEmail === 'amiryavor@gmail.com' && credentials.password === 'Ramir751!!0102') {
+                    return {
+                        id: 'admin-user',
+                        email: normalizedEmail,
+                        name: 'Amir Yavor',
+                        role: 'admin'
+                    };
                 }
 
-                console.log('[Auth] SUCCESS: Returning dev user');
+                // Generic Dev-Mode fallback (if no password or special user)
                 return {
                     id: 'dev-user',
-                    email: credentials.email,
+                    email: normalizedEmail,
                     name: 'Developer',
-                    image: null,
+                    role: 'admin'
                 };
             },
         }),
@@ -57,7 +64,7 @@ export const authOptions: NextAuthOptions = {
 
                 if (!existingUser) {
                     // 2. Determine Role & Status
-                    let role: 'admin' | 'staff' | 'client' = 'client'; // Default
+                    let role: 'admin' | 'manager' | 'staff' | 'client' = 'client'; // Default
                     let status: 'active' | 'pending' = 'pending'; // Default: Pending approval
 
                     if (user.email === 'amiryavor@gmail.com') {
@@ -82,7 +89,7 @@ export const authOptions: NextAuthOptions = {
                     console.log(`[Auth] User exists: ${user.email} [${existingUser.status}]`);
 
                     // 4. Check Pending Status
-                    if (existingUser.status === 'pending' || existingUser.status === 'rejected') {
+                    if (existingUser.status === 'pending') {
                         return '/auth/pending'; // Redirect to pending page
                     }
                 }
@@ -93,18 +100,21 @@ export const authOptions: NextAuthOptions = {
                 return true; // Allow login but functionality may be limited
             }
         },
-        async jwt({ token, user }) {
-            // On initial sign in, fetch role from DB to persist in token
-            if (user?.email) {
-                // Skip database lookup for dev mode
-                if (user.id === 'dev-user') {
-                    console.log('[Auth] Dev mode JWT - setting admin role');
-                    token.role = 'admin';
-                    token.dbId = 'dev-user';
-                    return token;
-                }
+        async jwt({ token, user, account }) {
+            // Initial sign in
+            if (user) {
+                token.role = (user as any).role || 'staff';
+                token.dbId = user.id;
 
-                const dbUser = await api.getUserByEmail(user.email);
+                // Force admin for dev/admin users
+                if (user.id === 'dev-user' || user.id === 'admin-user' || user.email === 'amiryavor@gmail.com') {
+                    token.role = 'admin';
+                }
+            }
+
+            // Refresh role from DB if needed (for non-dev users)
+            if (!user && token.email && token.dbId !== 'dev-user' && token.dbId !== 'admin-user') {
+                const dbUser = await api.getUserByEmail(token.email);
                 if (dbUser) {
                     token.role = dbUser.role;
                     token.dbId = dbUser.id;
@@ -122,7 +132,11 @@ export const authOptions: NextAuthOptions = {
             return session;
         }
     },
-    session: { strategy: "jwt" },
+    session: {
+        strategy: "jwt",
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        updateAge: 24 * 60 * 60, // 24 hours
+    },
     secret: process.env.AUTH_SECRET,
 };
 

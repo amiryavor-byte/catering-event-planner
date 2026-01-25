@@ -4,11 +4,17 @@ import { getDataService } from '@/lib/data/factory';
 import { revalidatePath } from 'next/cache';
 import OpenAI from 'openai';
 import * as XLSX from 'xlsx';
+// pdf-parse will be imported dynamically
 
-// Initialize OpenAI
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || '',
-});
+// Initialize OpenAI lazily
+let openaiInstance: OpenAI | null = null;
+function getOpenAI() {
+    if (openaiInstance) return openaiInstance;
+    openaiInstance = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY || '',
+    });
+    return openaiInstance;
+}
 
 interface ParsedStaffMember {
     name: string;
@@ -101,7 +107,11 @@ export async function parseStaffList(formData: FormData) {
             }
         }
 
-        revalidatePath('/dashboard/users');
+        try {
+            revalidatePath('/dashboard/users');
+        } catch (e) {
+            console.warn('revalidatePath skipped (non-Next context)');
+        }
 
         return {
             success: true,
@@ -121,6 +131,7 @@ export async function parseStaffList(formData: FormData) {
 }
 
 async function parseWithAI(content: string): Promise<ParsedStaffMember[]> {
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -128,13 +139,14 @@ async function parseWithAI(content: string): Promise<ParsedStaffMember[]> {
                 role: 'system',
                 content: `You are a data extraction assistant. Extract staff information from the provided text/CSV data.
 Return a JSON array of objects with these fields:
-- name (string, required)
-- email (string, required if available)
-- role (string, optional - e.g., "chef", "server", "manager", "staff")
-- phone (string, optional)
+- name (string, required): Full name of the person.
+- email (string, required if available): Professional email address.
+- role (string, optional): One of "chef", "server", "manager", "staff", "admin", "bartender", "dishwasher".
+- phone (string, optional): Phone number in any readable format.
 
 Handle various column orders and formats. Be flexible with column names (e.g., "Name", "Full Name", "Employee Name" are all name fields).
-If email is missing, still include the person but with an empty email field.
+If a field is missing, provide an empty string for required fields (like email) or omit optional ones.
+For the "role" field, map whatever title is given to the closest category from the list above.
 Return ONLY valid JSON, no markdown or explanations.`
             },
             {
@@ -199,9 +211,10 @@ export async function parseMenuFile(formData: FormData) {
         const isImage = fileName.endsWith('.png') || fileName.endsWith('.jpg') ||
             fileName.endsWith('.jpeg') || fileName.endsWith('.webp');
         const isPDF = fileName.endsWith('.pdf');
+        const isText = fileName.endsWith('.txt') || fileName.endsWith('.md');
 
-        if (!isImage && !isPDF) {
-            return { success: false, error: 'Invalid file type. Please upload PDF or image files.' };
+        if (!isImage && !isPDF && !isText) {
+            return { success: false, error: 'Invalid file type. Please upload PDF, image, or text files.' };
         }
 
         // Convert file to base64 for OpenAI Vision API
@@ -226,13 +239,27 @@ export async function parseMenuFile(formData: FormData) {
         let parsedItems: ParsedMenuItem[] = [];
 
         try {
-            parsedItems = await parseMenuWithAI(base64, mimeType);
+            if (isPDF) {
+                // Extract text from PDF and parse with LLM
+                const text = await extractTextFromPDF(buffer);
+                if (!text || text.trim().length === 0) {
+                    throw new Error('No text found in PDF');
+                }
+                parsedItems = await parseMenuText(text);
+            } else if (isText) {
+                // Handle text files directly
+                const text = await file.text();
+                parsedItems = await parseMenuText(text);
+            } else {
+                // Use Vision API for images
+                parsedItems = await parseMenuWithAI(base64, mimeType);
+            }
             console.log(`✅ AI parsed ${parsedItems.length} menu items`);
         } catch (aiError) {
             console.error('AI menu parsing failed:', aiError);
             return {
                 success: false,
-                error: 'Failed to extract menu data. Please ensure the image is clear and try again.'
+                error: 'Failed to extract menu data. If this is a scanned PDF, please convert it to an image (JPG/PNG) and try again.'
             };
         }
 
@@ -274,8 +301,12 @@ export async function parseMenuFile(formData: FormData) {
             }
         }
 
-        revalidatePath('/dashboard');
-        revalidatePath('/dashboard/menus');
+        try {
+            revalidatePath('/dashboard');
+            revalidatePath('/dashboard/menus');
+        } catch (e) {
+            console.warn('revalidatePath skipped (non-Next context)');
+        }
 
         return {
             success: true,
@@ -295,20 +326,25 @@ export async function parseMenuFile(formData: FormData) {
 }
 
 async function parseMenuWithAI(base64Data: string, mimeType: string): Promise<ParsedMenuItem[]> {
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
             {
                 role: 'system',
-                content: `You are a menu data extraction assistant. Extract all menu items from the provided menu image/PDF.
+                content: `You are an expert menu extraction assistant. Extract all menu items from the provided menu image/PDF.
 Return a JSON array of objects with these fields:
-- name (string, required): The dish name
-- description (string, optional): Brief description of the dish
-- category (string, required): Category like "Appetizer", "Main Course", "Dessert", "Beverage", "Salad", "Soup", etc.
-- ingredients (string array, optional): List of probable main ingredients (predict based on dish name and description)
+- name (string, required): The dish name.
+- description (string, optional): A clear, concise description of the dish.
+- category (string, required): One of "Appetizer", "Main Course", "Dessert", "Beverage", "Salad", "Soup", "Side Dish", "KSDS".
+- ingredients (string array, optional): List of 3-7 probable main ingredients based on the dish name and description. Be specific (e.g., "Salmon", "Rosemary", "Garlic" instead of just "Seasoning").
 
-Be thorough and extract ALL items you can find. Group similar items under appropriate categories.
-Return ONLY valid JSON, no markdown or explanations.`
+Rules:
+1. Extract ALL items you can find.
+2. If a dish fits multiple categories, pick the primary one.
+3. If ingredients aren't listed, use your culinary knowledge to predict the most likely main ingredients.
+4. Group items logically.
+5. Return ONLY valid JSON, no markdown or explanations.`
             },
             {
                 role: 'user',
@@ -335,6 +371,57 @@ Return ONLY valid JSON, no markdown or explanations.`
     // Clean potential markdown formatting
     const cleanedResult = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
+    return JSON.parse(cleanedResult);
+}
+
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+    try {
+        // @ts-ignore
+        const pdfLib = await import('pdf-parse');
+        // Handle both CJS function export and ESM class export patterns
+        if (typeof (pdfLib as any).default === 'function') {
+            const data = await (pdfLib as any).default(buffer);
+            return data.text;
+        } else if ((pdfLib as any).PDFParse) {
+            const parser = new pdfLib.PDFParse({ data: buffer });
+            const data = await parser.getText();
+            return data.text;
+        } else {
+            throw new Error('Unsupported pdf-parse export structure');
+        }
+    } catch (error) {
+        console.error('PDF extraction error:', error);
+        throw new Error('Failed to parse PDF file');
+    }
+}
+
+async function parseMenuText(text: string): Promise<ParsedMenuItem[]> {
+    const openai = getOpenAI();
+    const completion = await openai.chat.completions.create({
+        model: 'gpt-4o', // Text model is sufficient here
+        messages: [
+            {
+                role: 'system',
+                content: `You are a menu data extraction assistant. Extract all menu items from the provided menu text.
+Return a JSON array of objects with these fields:
+- name (string, required): The dish name
+- description (string, optional): Brief description of the dish
+- category (string, required): Category like "Appetizer", "Main Course", "Dessert", "Beverage", "Salad", "Soup", etc.
+- ingredients (string array, optional): List of probable main ingredients.
+
+Be thorough. If the text looks messy (OCR artifacts), do your best to reconstruct valid menu items.
+Return ONLY valid JSON, no markdown.`
+            },
+            {
+                role: 'user',
+                content: `Extract menu items from this text:\n\n${text.substring(0, 15000)}` // Limit text length just in case
+            }
+        ],
+        temperature: 0.3,
+    });
+
+    const result = completion.choices[0]?.message?.content || '[]';
+    const cleanedResult = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     return JSON.parse(cleanedResult);
 }
 

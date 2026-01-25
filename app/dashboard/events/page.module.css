@@ -1,0 +1,63 @@
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.eventCard {
+    display: block;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.eventCard:hover {
+    border-color: var(--primary);
+    background: rgba(59, 130, 246, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.eventHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.eventDetails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .eventHeader {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    /* Ensure budget is visible but distinct on mobile */
+    .eventHeader>div:last-child {
+        text-align: left;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .eventDetails {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .statsGrid {
+        grid-template-columns: 1fr;
+        /* Force single column stats on mobile */
+    }
+}

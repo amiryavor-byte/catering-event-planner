@@ -10,13 +10,22 @@ const config: Config = {
         extend: {
             colors: {
                 background: "var(--background)",
-                foreground: "var(--foreground)",
+                foreground: "var(--text-main)",
                 primary: "var(--primary)",
                 secondary: "var(--secondary)",
+                accent: "var(--accent)",
+                surface: "var(--surface)",
+                "surface-highlight": "var(--surface-highlight)",
                 success: "var(--success)",
+                warning: "var(--warning)",
+                danger: "var(--danger)",
             },
+            backgroundImage: {
+                'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.0))',
+            }
         },
     },
+
     plugins: [],
 };
 export default config;

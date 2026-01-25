@@ -1,27 +1,50 @@
 'use client';
 
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import styles from './page.module.css';
 
 export default function LoginPage() {
     const [devMode, setDevMode] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-    const handleDevLogin = () => {
+    const handleCredentialsLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        const result = await signIn('dev-mode', {
+            email,
+            password,
+            redirect: false,
+        });
+
+        if (result?.ok) {
+            window.location.href = '/dashboard';
+        } else {
+            setError('Invalid email or password');
+            setLoading(false);
+        }
+    };
+
+    const handleDevLogin = async () => {
         setLoading(true);
 
-        // Set dev mode cookie (expires in 24 hours)
-        const expires = new Date();
-        expires.setHours(expires.getHours() + 24);
-        document.cookie = `dev-mode=true; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+        // Proper NextAuth Sign In
+        const result = await signIn('dev-mode', {
+            email: 'amiryavor@gmail.com',
+            redirect: false,
+        });
 
-        // Set localStorage flags for client-side checks
-        localStorage.setItem('devMode', 'true');
-        localStorage.setItem('bypassed-auth', 'true');
-
-        // Redirect to dashboard
-        window.location.href = '/dashboard';
+        if (result?.ok) {
+            window.location.href = '/dashboard';
+        } else {
+            setLoading(false);
+        }
     };
 
     return (
@@ -33,7 +56,47 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-4 w-full">
-                    <Link href="/api/auth/signin/google?callbackUrl=/dashboard" className="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-medium py-3 px-4 rounded-xl hover:bg-slate-100 transition-colors">
+                    <form onSubmit={handleCredentialsLogin} className="space-y-4">
+                        <div>
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                required
+                            />
+                        </div>
+                        {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-primary text-white font-semibold py-3 px-4 rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
+                        >
+                            {loading ? 'Signing in...' : 'Sign In'}
+                        </button>
+                    </form>
+
+                    <div className="flex items-center gap-4 py-2">
+                        <div className="h-px flex-1 bg-slate-800" />
+                        <span className="text-slate-500 text-xs">OR</span>
+                        <div className="h-px flex-1 bg-slate-800" />
+                    </div>
+
+                    <button
+                        onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                        className="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-medium py-3 px-4 rounded-xl hover:bg-slate-100 transition-colors"
+                    >
                         {/* Google Icon */}
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -42,7 +105,7 @@ export default function LoginPage() {
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                         </svg>
                         Continue with Google
-                    </Link>
+                    </button>
 
                     {/* Dev Mode Toggle */}
                     <div className="relative">

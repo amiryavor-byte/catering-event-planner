@@ -1,0 +1,113 @@
+.form {
+    max-width: 100%;
+}
+
+.section {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.section:last-of-type {
+    border-bottom: none;
+}
+
+.sectionTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 1.5rem;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.fullWidth {
+    grid-column: 1 / -1;
+}
+
+.label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--slate-400);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    color: white;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(59, 130, 246, 0.05);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input::placeholder {
+    color: var(--slate-500);
+}
+
+@media (max-width: 768px) {
+    .formGrid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .section {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .input {
+        min-height: 48px;
+        /* Touch target size */
+        font-size: 16px;
+        /* Prevents iOS zoom */
+    }
+
+    /* Ensure checkboxes are easy to tap */
+    .input[type="checkbox"] {
+        min-height: 20px;
+        min-width: 20px;
+    }
+
+    .sectionTitle {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .form {
+        padding: 0;
+    }
+
+    /* Make buttons full width and stack */
+    .form :global(.flex) {
+        flex-direction: column;
+    }
+
+    .form :global(.btn-primary),
+    .form :global(.btn-secondary) {
+        width: 100%;
+        padding: 0.875rem;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}

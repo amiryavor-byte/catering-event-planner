@@ -1,5 +1,5 @@
 // Client-side company settings management
-// This uses localStorage until the backend API is ready
+// Migrated to PHP backend
 
 export interface CompanySettings {
     id?: number;
@@ -8,31 +8,40 @@ export interface CompanySettings {
     primaryColor: string;
 }
 
-export function saveCompanySettings(settings: CompanySettings): { success: boolean; settings?: CompanySettings; error?: string } {
-    try {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('companySettings', JSON.stringify(settings));
-            console.log('Company settings saved to localStorage:', settings);
-            return { success: true, settings };
-        }
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.jewishingenuity.com/Catering_app';
 
-        return { success: false, error: 'Window not available' };
+export async function saveCompanySettings(settings: CompanySettings): Promise<{ success: boolean; settings?: CompanySettings; error?: string }> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/company.php`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            console.log('Company settings saved to API:', settings);
+            // Also cache locally for immediate UI updates if needed, logic can be added here
+            return { success: true, settings };
+        } else {
+            return { success: false, error: data.error || 'Failed to save settings' };
+        }
     } catch (error) {
         console.error('Error saving company settings:', error);
-        return { success: false, error: 'Failed to save company settings' };
+        return { success: false, error: 'Network error occurred' };
     }
 }
 
-export function getCompanySettings(): CompanySettings | null {
+export async function getCompanySettings(): Promise<CompanySettings | null> {
     try {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem('companySettings');
-            if (stored) {
-                return JSON.parse(stored);
-            }
-        }
+        const response = await fetch(`${API_BASE_URL}/company.php`);
+        if (!response.ok) return null;
 
-        return null;
+        const data = await response.json();
+        return data || null;
     } catch (error) {
         console.error('Error fetching company settings:', error);
         return null;

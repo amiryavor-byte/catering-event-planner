@@ -3,6 +3,7 @@ import { getIngredients } from '@/lib/actions/ingredients';
 import { calculateRecipeCost, suggestPrice, calculateMargin, formatCurrency, getMarginStatus } from '@/lib/utils/cost-calculator';
 import { ArrowLeft, Save, Trash2, Plus, TrendingUp, DollarSign } from 'lucide-react';
 import Link from 'next/link';
+import DownloadMenuPDFButton from '@/components/DownloadMenuPDFButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,9 +41,14 @@ export default async function RecipeEditorPage({ params }: { params: { id: strin
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Header Info */}
                 <div className="lg:col-span-2">
-                    <h1 className="text-3xl font-bold text-white mb-2">{menuItem.name}</h1>
-                    <p className="text-slate-400 mb-4">{menuItem.description}</p>
-                    <span className="badge bg-primary/20 text-primary">{menuItem.category}</span>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white mb-2">{menuItem.name}</h1>
+                            <p className="text-slate-400 mb-4">{menuItem.description}</p>
+                            <span className="badge bg-primary/20 text-primary">{menuItem.category}</span>
+                        </div>
+                        <DownloadMenuPDFButton menuItem={menuItem} recipe={recipe} totalCost={totalCost} />
+                    </div>
                 </div>
 
                 {/* Cost Summary Panel */}
@@ -74,9 +80,9 @@ export default async function RecipeEditorPage({ params }: { params: { id: strin
                                 } />
                             </div>
                             <div className={`text-xl font-bold ${marginStatus === 'excellent' ? 'text-success' :
-                                    marginStatus === 'good' ? 'text-primary' :
-                                        marginStatus === 'low' ? 'text-warning' :
-                                            'text-error'
+                                marginStatus === 'good' ? 'text-primary' :
+                                    marginStatus === 'low' ? 'text-warning' :
+                                        'text-error'
                                 }`}>
                                 {margin.toFixed(1)}%
                             </div>

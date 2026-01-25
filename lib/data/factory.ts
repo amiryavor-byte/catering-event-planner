@@ -1,22 +1,29 @@
 import { IDataService } from './types';
 import { SqliteDataService } from './sqlite-service';
 import { ApiDataService } from './api-service';
+import { MockDataService } from './mock-service';
+import { HybridDataService } from './hybrid-service';
 
 // Singleton instance
-let serviceParams: IDataService | null = null;
+let serviceInstance: IDataService | null = null;
 
 export function getDataService(): IDataService {
-    if (serviceParams) return serviceParams;
+    if (serviceInstance) return serviceInstance;
 
     const mode = process.env.API_MODE || 'sqlite'; // 'sqlite' | 'api'
 
-    if (mode === 'api') {
-        console.log('🔌 Using Remote API Data Service');
-        serviceParams = new ApiDataService();
-    } else {
-        console.log('📂 Using Local SQLite Data Service');
-        serviceParams = new SqliteDataService();
+    try {
+        if (mode === 'api') {
+            console.log('🔌 Using Hybrid Data Service (API + Local Samples)');
+            serviceInstance = new HybridDataService();
+        } else {
+            console.log('📂 Using Local SQLite Data Service (Explicit)');
+            serviceInstance = new SqliteDataService();
+        }
+    } catch (error) {
+        console.warn('⚠️ Failed to initialize data service, using Mock fallback:', error);
+        serviceInstance = new MockDataService();
     }
 
-    return serviceParams;
+    return serviceInstance;
 }

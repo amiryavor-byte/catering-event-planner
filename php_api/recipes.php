@@ -1,90 +1,121 @@
 <?php
-// recipes.php
+/**
+ * Recipes API Endpoint
+ * Manages the ingredients assigned to menu items.
+ */
+
 require_once 'db_connect.php';
 
-// Auto-update database structure
-try {
-    // 1. Create ingredients table
-    $pdo->exec("CREATE TABLE IF NOT EXISTS `ingredients` (
-      `id` int(11) NOT NULL AUTO_INCREMENT,
-      `name` varchar(255) NOT NULL,
-      `unit` varchar(50) NOT NULL,
-      `price_per_unit` float NOT NULL,
-      `supplier_url` text,
-      `last_updated` timestamp DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`)
-    )");
-
-    // 2. Create menu_items table
-    $pdo->exec("CREATE TABLE IF NOT EXISTS `menu_items` (
-      `id` int(11) NOT NULL AUTO_INCREMENT,
-      `name` varchar(255) NOT NULL,
-      `description` text,
-      `base_price` float DEFAULT 0,
-      `category` varchar(100),
-      PRIMARY KEY (`id`)
-    )");
-
-    // 3. Create recipes table (depends on ingredients and menu_items)
-    $pdo->exec("CREATE TABLE IF NOT EXISTS `recipes` (
-      `id` int(11) NOT NULL AUTO_INCREMENT,
-      `menu_item_id` int(11) NOT NULL,
-      `ingredient_id` int(11) NOT NULL,
-      `amount_required` float NOT NULL,
-      PRIMARY KEY (`id`),
-      FOREIGN KEY (`menu_item_id`) REFERENCES `menu_items`(`id`) ON DELETE CASCADE,
-      FOREIGN KEY (`ingredient_id`) REFERENCES `ingredients`(`id`) ON DELETE CASCADE
-    )");
-
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Failed to update database structure: ' . $e->getMessage()]);
-    exit;
-}
-
+header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
-switch ($method) {
-    case 'GET':
-        // Optional: Filter by menu_item_id
-        $menuId = $_GET['menu_item_id'] ?? null;
-        if ($menuId) {
+try {
+    switch ($method) {
+        // GET: Retrieve recipe items for a menu item
+        case 'GET':
+            $menuItemId = $_GET['menu_item_id'] ?? null;
+
+            if (!$menuItemId || !is_numeric($menuItemId)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Valid Menu Item ID is required']);
+                exit;
+            }
+
+            // Join with ingredients to get details
             $sql = "SELECT r.*, i.name as ingredient_name, i.unit, i.price_per_unit 
                     FROM recipes r 
                     JOIN ingredients i ON r.ingredient_id = i.id 
                     WHERE r.menu_item_id = ?";
+            
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$menuId]);
-        } else {
-            $stmt = $pdo->query("SELECT * FROM recipes");
-        }
-        $data = $stmt->fetchAll();
-        echo json_encode($data);
-        break;
+            $stmt->execute([$menuItemId]);
+            $data = $stmt->fetchAll();
 
-    case 'POST':
-        $input = json_decode(file_get_contents('php://input'), true);
+            // Transform keys to camelCase for frontend
+            $transformed = array_map(function($item) {
+                return [
+                    'id' => $item['id'],
+                    'menuItemId' => $item['menu_item_id'],
+                    'ingredientId' => $item['ingredient_id'],
+                    'amountRequired' => (float)$item['amount_required'],
+                    'ingredientName' => $item['ingredient_name'],
+                    'unit' => $item['unit'],
+                    'pricePerUnit' => (float)$item['price_per_unit']
+                ];
+            }, $data);
 
-        $sql = "INSERT INTO recipes (menu_item_id, ingredient_id, amount_required) VALUES (?, ?, ?)";
-        $stmt = $pdo->prepare($sql);
-        try {
+            echo json_encode($transformed);
+            break;
+
+        // POST: Add ingredient to recipe
+        case 'POST':
+            $input = json_decode(file_get_contents('php://input'), true);
+
+            if (empty($input['menuItemId']) || empty($input['ingredientId']) || empty($input['amountRequired'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing required fields']);
+                exit;
+            }
+
+            // Check if already exists
+            $stmt = $pdo->prepare("SELECT id FROM recipes WHERE menu_item_id = ? AND ingredient_id = ?");
+            $stmt->execute([$input['menuItemId'], $input['ingredientId']]);
+            if ($stmt->fetch()) {
+                http_response_code(409);
+                echo json_encode(['error' => 'Ingredient already in recipe']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO recipes (menu_item_id, ingredient_id, amount_required) VALUES (?, ?, ?)");
             $stmt->execute([
                 $input['menuItemId'],
                 $input['ingredientId'],
                 $input['amountRequired']
             ]);
+
+            http_response_code(201);
             echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
-        }
-        break;
+            break;
 
-    // TODO: DELETE method
+        // PUT: Update amount
+        case 'PUT':
+            $input = json_decode(file_get_contents('php://input'), true);
 
-    default:
-        http_response_code(405);
-        echo json_encode(['error' => 'Method not allowed']);
-        break;
+            if (empty($input['id']) || !isset($input['amountRequired'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing ID or Amount']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("UPDATE recipes SET amount_required = ? WHERE id = ?");
+            $stmt->execute([$input['amountRequired'], $input['id']]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        // DELETE: Remove ingredient from recipe
+        case 'DELETE':
+            $id = $_GET['id'] ?? null;
+
+            if (!$id) {
+                http_response_code(400);
+                echo json_encode(['error' => 'ID required']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM recipes WHERE id = ?");
+            $stmt->execute([$id]);
+
+            echo json_encode(['success' => true]);
+            break;
+
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            break;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
 }
 ?>

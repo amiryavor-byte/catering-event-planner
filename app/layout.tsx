@@ -13,6 +13,8 @@ export const metadata: Metadata = {
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth';
 
+import { Providers } from '@/components/Providers';
+
 export default async function RootLayout({
   children,
 }: {
@@ -23,8 +25,10 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={outfit.className}>
-        {children}
-        <VersionBadge userEmail={session?.user?.email || undefined} />
+        <Providers>
+          {children}
+          <VersionBadge userEmail={session?.user?.email || undefined} />
+        </Providers>
       </body>
     </html>
   );
