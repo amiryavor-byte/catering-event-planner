@@ -24,6 +24,7 @@ export interface User {
     createdAt?: string;
     password?: string; // Optional for security
     isSample?: boolean;
+    hourlyRate?: number;
 }
 
 export interface Message {

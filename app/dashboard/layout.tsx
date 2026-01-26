@@ -5,8 +5,11 @@ import Sidebar, { SidebarMode } from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
 import WelcomeTour from '@/components/WelcomeTour';
 import { NotificationCenter } from '@/components/NotificationCenter';
+
 import { OnlineUsers } from '@/components/OnlineUsers';
 import CommandPalette from '@/components/CommandPalette';
+import { ChatProvider } from '@/lib/contexts/ChatContext';
+import { ChatWidget } from '@/components/chat/ChatWidget';
 
 export default function DashboardLayout({
     children,
@@ -98,6 +101,10 @@ export default function DashboardLayout({
 
             <WelcomeTour />
             <CommandPalette />
+
+            <ChatProvider>
+                <ChatWidget />
+            </ChatProvider>
         </div>
     );
 }

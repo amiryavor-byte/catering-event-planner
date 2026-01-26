@@ -41,7 +41,7 @@ async function deploy() {
             user: user,
             password: password,
             secure: false, // Disable FTPS to avoid timeouts
-            accessTimeout: 30000,
+            accessTimeout: 60000,
         });
 
         console.log("✅ Authenticated");
