@@ -46,7 +46,7 @@ export default function SampleDataPopover() {
                 setMessage(result.message || 'Sample data generated successfully!');
                 await loadStats();
             } else {
-                setMessage(`Error: ${result.error}`);
+                setMessage(`Error: ${result.error || result.message || 'Unknown error occurred'}`);
             }
         } catch (error) {
             setMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
