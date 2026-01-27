@@ -16,7 +16,7 @@ import {
     Package,
     GripVertical,
     GripHorizontal,
-    ArrowRightTOLine,
+    ArrowRightToLine,
     ArrowLeftToLine,
     ArrowUpToLine,
     ArrowDownToLine,

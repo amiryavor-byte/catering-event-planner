@@ -73,6 +73,22 @@ export class HybridDataService implements IDataService {
         return localUser ? this.mapLocalData(localUser) : null;
     }
 
+    async getUser(id: number): Promise<User | null> {
+        if (id < 0) {
+            const localUser = await this.sqlite.getUser(this.toOriginalId(id));
+            return localUser ? this.mapLocalData(localUser) : null;
+        }
+        return this.api.getUser(id);
+    }
+
+    async resetPassword(id: number): Promise<void> {
+        if (id < 0) {
+            await this.sqlite.resetPassword(this.toOriginalId(id));
+        } else {
+            await this.api.resetPassword(id);
+        }
+    }
+
     async addUser(data: Omit<User, 'id'>): Promise<User> {
         if (data.isSample) {
             return this.sqlite.addUser(data).then(u => this.mapLocalData(u));
@@ -138,6 +154,14 @@ export class HybridDataService implements IDataService {
             if (mapped.clientId) mapped.clientId = this.toLocalId(mapped.clientId);
             return mapped;
         })];
+    }
+
+    async getEvent(id: number): Promise<Event | null> {
+        if (id < 0) {
+            const localEvent = await this.sqlite.getEvent(this.toOriginalId(id));
+            return localEvent ? this.mapLocalData(localEvent) : null;
+        }
+        return this.api.getEvent(id);
     }
 
     async addEvent(data: Omit<Event, 'id' | 'createdAt'>): Promise<Event> {
@@ -475,5 +499,43 @@ export class HybridDataService implements IDataService {
         } catch (e) {
             await this.sqlite.updateShiftBid(id, data);
         }
+    }
+
+    async updateRecipeItem(id: number, amount: number): Promise<void> {
+        if (id < 0) {
+            await this.sqlite.updateRecipeItem(this.toOriginalId(id), amount);
+        } else {
+            await this.api.updateRecipeItem(id, amount);
+        }
+    }
+
+    async deleteRecipeItem(id: number): Promise<void> {
+        if (id < 0) {
+            await this.sqlite.deleteRecipeItem(this.toOriginalId(id));
+        } else {
+            await this.api.deleteRecipeItem(id);
+        }
+    }
+
+    async getEventStaff(eventId: number): Promise<any[]> {
+        if (eventId < 0) {
+            return this.sqlite.getEventStaff(this.toOriginalId(eventId));
+        }
+        return this.api.getEventStaff(eventId);
+    }
+
+    async getEventEquipment(eventId: number): Promise<any[]> {
+        if (eventId < 0) {
+            return this.sqlite.getEventEquipment(this.toOriginalId(eventId));
+        }
+        return this.api.getEventEquipment(eventId);
+    }
+
+    async getMessages(params: any): Promise<any[]> {
+        return this.api.getMessages(params);
+    }
+
+    async sendMessage(data: any): Promise<any> {
+        return this.api.sendMessage(data);
     }
 }

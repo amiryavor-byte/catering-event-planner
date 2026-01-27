@@ -2,11 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import enUS from 'date-fns/locale/en-US';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { StaffAvailability } from '@/lib/data/types';
 import { addAvailability, deleteAvailability, requestTimeOff } from '@/lib/actions/availability';
@@ -31,7 +28,7 @@ interface AvailabilityCalendarProps {
 }
 
 export default function AvailabilityCalendar({ initialData, userId }: AvailabilityCalendarProps) {
-    const [events, setEvents] = useState(initialData.map(transformToEvent));
+    const [events, setEvents] = useState(initialData.map(transformToEvent).filter(Boolean) as any[]);
     const [view, setView] = useState<View>(Views.MONTH);
     const [date, setDate] = useState(new Date());
 
@@ -48,6 +45,7 @@ export default function AvailabilityCalendar({ initialData, userId }: Availabili
     });
 
     function transformToEvent(av: StaffAvailability) {
+        if (!av.date) return null;
         let start = new Date(av.date);
         let end = new Date(av.date);
 
@@ -61,7 +59,7 @@ export default function AvailabilityCalendar({ initialData, userId }: Availabili
         }
 
         let title = 'Available';
-        if (av.type === 'is_unavailable' || av.type === 'unavailable') title = 'Unavailable';
+        if (av.type === 'unavailable') title = 'Unavailable';
         if (av.type === 'preferred_off') title = 'Preferred Off';
 
         return {

@@ -64,13 +64,14 @@ export default function StaffManager({
         // Check Availability
         const availability = allAvailability.find(a => a.userId === userId && a.date === eventDateStr);
         if (availability) {
-            if (availability.type === 'is_unavailable' || availability.type === 'unavailable') { // Handle legacy type if any
+            if (availability.type === 'unavailable') {
                 return { type: 'error', message: availability.reason ? `Unavailable: ${availability.reason}` : 'Unavailable' };
             }
             if (availability.type === 'preferred_off') {
                 return { type: 'warning', message: 'Prefers Off' };
             }
         }
+
         return null;
     };
 

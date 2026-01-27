@@ -108,7 +108,7 @@ export async function getKitchenOrders() {
     }
 }
 
-export async function updateOrderItemStatus(itemId: number, status: string) {
+export async function updateItemStatus(itemId: number, status: "prep" | "cooking" | "ready" | "served") {
     try {
         await db.update(eventMenuItems)
             .set({ status })

@@ -59,6 +59,12 @@ export class SqliteDataService implements IDataService {
         return rows.length > 0 ? rows[0] : null;
     }
 
+    async getUser(id: number): Promise<User | null> {
+        const rows = await db.select().from(users).where(eq(users.id, id));
+        // @ts-ignore
+        return rows.length > 0 ? rows[0] : null;
+    }
+
     async approveUser(email: string): Promise<void> {
         // Mock approval for local dev
         // In real app, we need to update status column, but schema might not have it yet locally
@@ -172,11 +178,24 @@ export class SqliteDataService implements IDataService {
         }
     }
 
+    async getEvent(id: number): Promise<Event | null> {
+        const rows = await db.select().from(events).where(eq(events.id, id));
+        if (rows.length === 0) return null;
+        // @ts-ignore
+        return {
+            ...rows[0],
+            isSample: rows[0].isSample === true
+        };
+    }
+
     async addEvent(data: Omit<Event, 'id' | 'createdAt'>): Promise<Event> {
+        const payload: any = { ...data };
+        if (payload.quoteExpiresAt instanceof Date) payload.quoteExpiresAt = payload.quoteExpiresAt.toISOString();
+        if (payload.quoteViewedAt instanceof Date) payload.quoteViewedAt = payload.quoteViewedAt.toISOString();
         const result = await db.insert(events).values({
-            ...data,
-            eventType: data.eventType as any,
-            isSample: data.isSample || false
+            ...payload,
+            eventType: payload.eventType as any,
+            isSample: payload.isSample || false
         }).returning();
         // @ts-ignore
         return result[0];
@@ -247,6 +266,17 @@ export class SqliteDataService implements IDataService {
     async deleteEventMenuItem(id: number): Promise<void> {
         const { eventMenuItems } = await import('@/lib/db/schema');
         await db.delete(eventMenuItems).where(eq(eventMenuItems.id, id));
+    }
+
+    async getEventStaff(eventId: number): Promise<any[]> {
+        const { eventStaff } = await import('@/lib/db/schema');
+        const rows = await db.select().from(eventStaff).where(eq(eventStaff.eventId, eventId));
+        return rows;
+    }
+
+    async getEventEquipment(eventId: number): Promise<any[]> {
+        // Implement if schema exists
+        return [];
     }
 
     async addEventStaff(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void> {
@@ -422,7 +452,10 @@ export class SqliteDataService implements IDataService {
     }
 
     async updateStaffAvailability(id: number, data: Partial<StaffAvailability>): Promise<void> {
-        await db.update(staffAvailability).set(data).where(eq(staffAvailability.id, id));
+        // Ensure dates are strings for SQLite
+        const payload: any = { ...data };
+        if (payload.createdAt instanceof Date) payload.createdAt = payload.createdAt.toISOString();
+        await db.update(staffAvailability).set(payload).where(eq(staffAvailability.id, id));
     }
 
     async deleteStaffAvailability(id: number): Promise<void> {
@@ -479,7 +512,9 @@ export class SqliteDataService implements IDataService {
     }
 
     async updateOpenShift(id: number, data: Partial<OpenShift>): Promise<void> {
-        await db.update(openShifts).set(data).where(eq(openShifts.id, id));
+        const payload: any = { ...data };
+        if (payload.createdAt instanceof Date) payload.createdAt = payload.createdAt.toISOString();
+        await db.update(openShifts).set(payload).where(eq(openShifts.id, id));
     }
 
     async deleteOpenShift(id: number): Promise<void> {
@@ -505,7 +540,9 @@ export class SqliteDataService implements IDataService {
     }
 
     async updateShiftBid(id: number, data: Partial<ShiftBid>): Promise<void> {
-        await db.update(shiftBids).set(data).where(eq(shiftBids.id, id));
+        const payload: any = { ...data };
+        if (payload.bidTime instanceof Date) payload.bidTime = payload.bidTime.toISOString();
+        await db.update(shiftBids).set(payload).where(eq(shiftBids.id, id));
     }
 
     async getDataStats(): Promise<{

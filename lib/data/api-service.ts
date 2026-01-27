@@ -54,6 +54,11 @@ export class ApiDataService implements IDataService {
         return this.fetchJson(`/users.php${query}`);
     }
 
+    async getUser(id: number): Promise<User | null> {
+        const users = await this.getUsers();
+        return users.find(u => u.id === id) || null;
+    }
+
     async getUserByEmail(email: string): Promise<User | null> {
         const users = await this.fetchJson(`/users.php?email=${encodeURIComponent(email)}`);
         return users.length > 0 ? users[0] : null;
@@ -155,25 +160,36 @@ export class ApiDataService implements IDataService {
     }
 
     // Events
-    async getEvents(): Promise<any[]> {
-        return this.fetchJson('/events.php');
+    async getEvents(): Promise<Event[]> {
+        return this.fetchJson('/events.php?action=list');
     }
 
-    async addEvent(data: any): Promise<any> {
-        const res = await this.fetchJson('/events.php', {
+    async getEvent(id: number): Promise<Event | null> {
+        const events = await this.getEvents();
+        return events.find(e => e.id === id) || null;
+    }
+
+    async addEvent(data: Omit<Event, 'id' | 'createdAt'>): Promise<Event> {
+        return this.fetchJson('/events.php?action=create', {
             method: 'POST',
-            body: JSON.stringify(data),
-            headers: { 'Content-Type': 'application/json' }
+            body: JSON.stringify(data)
         });
-        return { id: res.id, ...data };
     }
 
     async updateEvent(id: number, data: Partial<Event>): Promise<void> {
-        await this.fetchJson('/events.php', {
-            method: 'PUT',
-            body: JSON.stringify({ id, ...data }),
-            headers: { 'Content-Type': 'application/json' }
+        await this.fetchJson('/events.php?action=update', {
+            method: 'POST', // or PUT
+            body: JSON.stringify({ id, ...data })
         });
+    }
+
+    async getEventStaff(eventId: number): Promise<any[]> {
+        // Mock or implement if API supports it
+        return [];
+    }
+
+    async getEventEquipment(eventId: number): Promise<any[]> {
+        return [];
     }
 
     // Event Menu Items

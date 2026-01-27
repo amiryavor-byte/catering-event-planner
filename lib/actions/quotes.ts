@@ -6,16 +6,10 @@ import { randomUUID } from "crypto";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 
-export interface QuoteConfig {
-    depositType: 'percentage' | 'fixed';
-    depositAmount: number;
-    sectionsOrder: string[];
-    editableFields: string[]; // e.g., ['guestCount', 'menuQuantities']
-    showImages: boolean;
-    allowClientEdit: boolean;
-    requireDeposit: boolean;
-    internalNotes?: string;
-}
+import { QuoteConfig, Event, User, EventMenuItem } from "@/lib/data/types";
+
+// Remove local QuoteConfig interface since it's now in types
+
 
 export const DEFAULT_QUOTE_CONFIG: QuoteConfig = {
     depositType: 'percentage',
@@ -23,6 +17,8 @@ export const DEFAULT_QUOTE_CONFIG: QuoteConfig = {
     sectionsOrder: ['header', 'details', 'menu', 'staff', 'equipment', 'terms', 'payment'],
     editableFields: [],
     showImages: true,
+    showDescription: true,
+    showTotals: true,
     allowClientEdit: false,
     requireDeposit: true
 };
@@ -40,7 +36,6 @@ export async function getQuoteData(eventId: number) {
     ]);
 
     // Parse the JSON config if it exists, otherwise return default
-    // @ts-expect-error - partial update support - Drizzle types might not fully infer the json mode automatically without casting in some setups
     const config: QuoteConfig = event.quoteConfig ? (typeof event.quoteConfig === 'string' ? JSON.parse(event.quoteConfig) : event.quoteConfig) : DEFAULT_QUOTE_CONFIG;
 
     return {
@@ -72,7 +67,6 @@ export async function updateQuoteConfig(eventId: number, config: Partial<QuoteCo
     // checking data service capabilities...
 
     await service.updateEvent(eventId, {
-        // @ts-expect-error - partial update support
         quoteConfig: newConfig
     });
 
@@ -86,7 +80,6 @@ export async function publishQuote(eventId: number) {
 
     await service.updateEvent(eventId, {
         status: 'quote',
-        // @ts-expect-error - partial update support
         quoteToken: token,
         quoteExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days default
     });
@@ -97,8 +90,7 @@ export async function publishQuote(eventId: number) {
 
 export async function getQuoteByToken(token: string) {
     const service = getDataService();
-    // @ts-expect-error - partial update support
-    const event = await service.getEventByToken ? service.getEventByToken(token) : null;
+    const event = service.getEventByToken ? await service.getEventByToken(token) : null;
 
     if (!event) return null;
 
@@ -136,7 +128,6 @@ export async function uploadPaymentProof(token: string, formData: FormData) {
         const currentConfig = quoteData.config;
 
         await service.updateEvent(quoteData.event.id, {
-            // @ts-expect-error - partial update support
             quoteConfig: {
                 ...currentConfig,
                 paymentProofUrl: publicUrl,

@@ -112,12 +112,14 @@ export const authOptions: NextAuthOptions = {
                 }
             }
 
-            // Refresh role from DB if needed (for non-dev users)
+            // Refresh role/data from DB if needed
             if (!user && token.email && token.dbId !== 'dev-user' && token.dbId !== 'admin-user') {
                 const dbUser = await api.getUserByEmail(token.email);
                 if (dbUser) {
                     token.role = dbUser.role;
                     token.dbId = dbUser.id;
+                    token.picture = dbUser.profileImage;
+                    token.language = dbUser.language;
                 }
             }
             return token;
@@ -128,6 +130,10 @@ export const authOptions: NextAuthOptions = {
                 session.user.role = token.role;
                 // @ts-ignore
                 session.user.id = token.dbId;
+                // @ts-ignore
+                session.user.image = token.picture; // Override default image
+                // @ts-ignore
+                session.user.language = token.language || 'en';
             }
             return session;
         }

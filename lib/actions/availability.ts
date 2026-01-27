@@ -240,7 +240,7 @@ export async function getAllOpenShifts() {
         return {
             ...s,
             eventName: event?.name || 'Unknown Event',
-            eventDate: event?.date || event?.startDate // Adjust based on Event type
+            eventDate: event?.startDate // Adjust based on Event type
         };
     });
 }

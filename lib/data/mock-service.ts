@@ -1,10 +1,34 @@
-import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid } from './types';
+import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, Menu, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid } from './types';
 
 /**
  * Mock service that returns empty data
  * Used as fallback when database/API is unavailable
  */
 export class MockDataService implements IDataService {
+    // Basic stubs for missing methods to satisfy interface
+    async getUser(id: number): Promise<User | null> { return null; }
+    async resetPassword(id: number): Promise<void> { }
+    async getEvent(id: number): Promise<Event | null> { return null; }
+    async updateEvent(id: number, data: Partial<Event>): Promise<void> { }
+    async getEventStaff(eventId: number): Promise<any[]> { return []; }
+    async getEventEquipment(eventId: number): Promise<any[]> { return []; }
+    async updateRecipeItem(id: number, amount: number): Promise<void> { }
+    async deleteRecipeItem(id: number): Promise<void> { }
+    async getEventMenuItems(eventId: number): Promise<EventMenuItem[]> { return []; }
+    async addEventMenuItem(data: Omit<EventMenuItem, 'id'>): Promise<EventMenuItem> { throw new Error("Mock not implemented"); }
+    async updateEventMenuItem(id: number, data: Partial<EventMenuItem>): Promise<void> { }
+    async deleteEventMenuItem(id: number): Promise<void> { }
+    async addEventStaff(data: any): Promise<void> { }
+
+    async getDataStats(): Promise<any> {
+        return { events: 0, users: 0, menus: 0, menuItems: 0, ingredients: 0, recipes: 0, tasks: 0 };
+    }
+
+    async getMessages(params: any): Promise<any[]> { return []; }
+    async sendMessage(data: any): Promise<any> { throw new Error("Mock sendMessage not implemented"); }
+
+    async clearAllData(): Promise<void> { console.log('[Mock] clearAllData'); }
+    async clearSampleData(): Promise<void> { console.log('[Mock] clearSampleData'); }
 
     async getIngredients(): Promise<Ingredient[]> {
         console.warn('[MockService] getIngredients called - returning empty array');

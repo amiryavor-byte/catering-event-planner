@@ -63,7 +63,7 @@ export function DownloadQuotePdfButton({ data, className }: { data: QuoteData; c
             // --- MENU TABLE ---
             // Prepare table data
             const tableRows = data.items.menu.map(item => [
-                item.menuItemName,
+                item.menuItemName || 'Unknown',
                 item.description || '',
                 item.quantity,
                 `$${(item.priceOverride ?? item.basePrice ?? 0).toFixed(2)}`,
@@ -73,7 +73,6 @@ export function DownloadQuotePdfButton({ data, className }: { data: QuoteData; c
             // Calculate total for footer
             const menuTotal = data.items.menu.reduce((sum, item) => sum + ((item.priceOverride ?? item.basePrice ?? 0) * item.quantity), 0);
 
-            // @ts-expect-error - jspdf plugin types - jspdf-autotable types can be finicky
             autoTable(doc, {
                 startY: startY + 30,
                 head: [['Item', 'Description', 'Qty', 'Unit Price', 'Total']],

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { QuoteConfig, uploadPaymentProof } from '@/lib/actions/quotes';
-import { Event, User, EventMenuItem } from '@/lib/data/types';
+import { uploadPaymentProof } from '@/lib/actions/quotes';
+import { Event, User, EventMenuItem, QuoteConfig } from '@/lib/data/types';
 import { Check, CreditCard, Upload, MessageSquare } from 'lucide-react';
 import { DownloadQuotePdfButton } from '@/components/quotes/DownloadQuotePdfButton';
 

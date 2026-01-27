@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { QuoteConfig, updateQuoteConfig, publishQuote, sendQuoteEmail } from '@/lib/actions/quotes';
+import { updateQuoteConfig, publishQuote, sendQuoteEmail } from '@/lib/actions/quotes';
 import { DownloadQuotePdfButton } from '@/components/quotes/DownloadQuotePdfButton';
-import { Event, User, EventMenuItem, StaffAvailability } from '@/lib/data/types';
+import { Event, User, EventMenuItem, StaffAvailability, QuoteConfig } from '@/lib/data/types';
 import { ArrowLeft, Save, Send, Eye, DollarSign, Settings, GripVertical, Check, Mail } from 'lucide-react';
 
 interface QuoteData {

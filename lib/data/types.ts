@@ -181,6 +181,7 @@ export interface IDataService {
 
     // Users
     getUsers(status?: string): Promise<User[]>;
+    getUser(id: number): Promise<User | null>; // Added
     getUserByEmail(email: string): Promise<User | null>;
     addUser(data: Omit<User, 'id'>): Promise<User>;
     updateUser(id: number, data: Partial<User>): Promise<void>;
@@ -193,18 +194,23 @@ export interface IDataService {
 
     // Events
     getEvents(): Promise<Event[]>;
+    getEvent(id: number): Promise<Event | null>;
     addEvent(data: Omit<Event, 'id' | 'createdAt'>): Promise<Event>;
-    updateEvent?(id: number, data: Partial<Event>): Promise<void>;
+    updateEvent(id: number, data: Partial<Event>): Promise<void>; // Made required
     getEventByToken?(token: string): Promise<Event | null>;
 
     // Event Menu Items
-    getEventMenuItems?(eventId: number): Promise<EventMenuItem[]>;
+    getEventMenuItems(eventId: number): Promise<EventMenuItem[]>; // Made required
     addEventMenuItem?(data: Omit<EventMenuItem, 'id'>): Promise<EventMenuItem>;
     updateEventMenuItem?(id: number, data: Partial<EventMenuItem>): Promise<void>;
     deleteEventMenuItem?(id: number): Promise<void>;
 
     // Event Staff
+    getEventStaff(eventId: number): Promise<any[]>; // Added
     addEventStaff?(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void>;
+
+    // Event Equipment
+    getEventEquipment(eventId: number): Promise<any[]>; // Added
 
     // Menus
     getMenus(): Promise<Menu[]>;
@@ -221,6 +227,7 @@ export interface IDataService {
 
     // Sample Data
     clearAllData?(): Promise<void>;
+    clearSampleData?(): Promise<void>;
     getDataStats?(): Promise<{
         events: number;
         users: number;
@@ -253,4 +260,19 @@ export interface IDataService {
     getShiftBids(shiftId?: number, userId?: number): Promise<ShiftBid[]>;
     addShiftBid(data: Omit<ShiftBid, 'id' | 'bidTime'>): Promise<ShiftBid>;
     updateShiftBid(id: number, data: Partial<ShiftBid>): Promise<void>;
+}
+
+export interface QuoteConfig {
+    showImages: boolean;
+    showDescription: boolean;
+    showTotals: boolean;
+    depositAmount: number;
+    depositType: 'percentage' | 'fixed';
+    termsAndConditions?: string;
+    validUntil?: string;
+    sectionsOrder?: string[];
+    editableFields?: string[];
+    allowClientEdit?: boolean;
+    requireDeposit?: boolean;
+    internalNotes?: string;
 }

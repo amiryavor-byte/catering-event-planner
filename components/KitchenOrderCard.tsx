@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { updateOrderItemStatus } from "@/lib/actions/kitchen";
+import { updateItemStatus } from "@/lib/actions/kitchen";
 import { useState } from "react";
 
 const STATUS_FLOW = ["prep", "cooking", "ready", "served"];
@@ -15,14 +15,15 @@ export function KitchenOrderCard({ order }: { order: any }) {
 
     const handleStatusClick = async (itemId: number, currentStatus: string) => {
         const currentIndex = STATUS_FLOW.indexOf(currentStatus || "prep");
-        const nextStatus = STATUS_FLOW[(currentIndex + 1) % STATUS_FLOW.length];
+        // @ts-ignore - status flow typing
+        const nextStatus: "prep" | "cooking" | "ready" | "served" = STATUS_FLOW[(currentIndex + 1) % STATUS_FLOW.length];
 
         // Optimistic update
         setLocalItems((prev: any[]) => prev.map((item) =>
             item.id === itemId ? { ...item, status: nextStatus } : item
         ));
 
-        await updateOrderItemStatus(itemId, nextStatus);
+        await updateItemStatus(itemId, nextStatus);
     };
 
     const getStatusColor = (status: string) => {

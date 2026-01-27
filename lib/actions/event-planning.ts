@@ -181,7 +181,7 @@ export async function getEventTasks(eventId: number) {
     let query = db.select().from(tasks).where(eq(tasks.eventId, eventId));
 
     // @ts-ignore
-    if (session?.user?.role === 'staff' && session?.user?.id) {
+    if (session?.user?.role === 'staff' && session?.user?.email) {
         // Find user by email to get numeric ID if id is 'dev-user' or string
         const user = await db.select().from(users).where(eq(users.email, session.user.email)).get();
         if (user) {

@@ -1,5 +1,8 @@
 import React from 'react';
 import { getQuoteData } from '@/lib/actions/quotes';
+
+export const dynamic = 'force-dynamic';
+
 import { QuoteBuilder } from './QuoteBuilder';
 import { notFound } from 'next/navigation';
 
@@ -8,7 +11,9 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
 
     // Parse ID
     const eventId = parseInt(id);
-    if (isNaN(eventId)) return notFound();
+    if (isNaN(eventId)) {
+        return <div className="p-8 text-center text-red-500">Invalid Event ID</div>;
+    }
 
     try {
         const data = await getQuoteData(eventId);

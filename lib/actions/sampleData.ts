@@ -734,8 +734,9 @@ export async function generateSampleData() {
             // We need ingredient IDs. Let's make one or two.
             const beef = await service.addIngredient({
                 name: `Ground Beef ${uniqueId}`,
-                unit: 'kg',
-                pricePerUnit: 10,
+                unit: 'pack',
+                pricePerUnit: 5,
+                supplierUrl: null,
                 isSample: true
             });
             results.ingredients++;
@@ -749,11 +750,13 @@ export async function generateSampleData() {
             results.recipes++;
 
             // Link items to event
-            await service.addEventMenuItem({
-                eventId: kdsEvent.id,
-                menuItemId: burger.id,
-                quantity: 50
-            });
+            if (service.addEventMenuItem) {
+                await service.addEventMenuItem({
+                    eventId: kdsEvent.id,
+                    menuItemId: burger.id,
+                    quantity: 50
+                });
+            }
 
             // d) Assign Staff to Event
             if (service.addEventStaff) {

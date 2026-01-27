@@ -13,24 +13,42 @@ export function ChatWidget() {
     const [isRecording, setIsRecording] = useState(false);
 
     // PTT Refs
-    const mediaRecorderRef = import.meta.env ? null : null; // Safe guard? specific to environment
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
     const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
     const [recognition, setRecognition] = useState<any>(null); // SpeechRecognition type is erratic in TS
     const [liveTranscript, setLiveTranscript] = useState('');
 
-    // Initialize Speech Recognition
-    if (typeof window !== 'undefined' && !recognition) {
-        // @ts-ignore
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const tempRecog = new SpeechRecognition();
-            tempRecog.continuous = true;
-            tempRecog.interimResults = true;
-            tempRecog.lang = 'en-US'; // Should pull from user settings ideally
-            setRecognition(tempRecog);
+    // Helper: Map user pref to SpeechRecog code
+    const getLangCode = (lang: string) => {
+        switch (lang) {
+            case 'es': return 'es-ES';
+            case 'fr': return 'fr-FR';
+            case 'he': return 'he-IL';
+            default: return 'en-US';
         }
-    }
+    };
+
+    // Initialize Speech Recognition (Effect to handle language change)
+    const initRecognition = () => {
+        if (typeof window !== 'undefined') {
+            // @ts-ignore
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const tempRecog = new SpeechRecognition();
+                tempRecog.continuous = true;
+                tempRecog.interimResults = true;
+                // @ts-ignore
+                tempRecog.lang = getLangCode(session?.user?.language || 'en');
+                setRecognition(tempRecog);
+            }
+        }
+    };
+
+    // Re-init when session loads
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useState(() => {
+        initRecognition();
+    });
 
     const startRecording = async () => {
         setIsRecording(true);
@@ -171,7 +189,14 @@ export function ChatWidget() {
 
                                         {msg.transcription && (
                                             <div className="mt-2 pt-2 border-t border-white/20 text-xs italic opacity-80">
-                                                "{msg.transcription}"
+                                                {/* Simulated Translation Layer */}
+                                                {(session?.user as any)?.language && (session.user as any).language !== 'en' ? (
+                                                    <span className="text-yellow-400">
+                                                        [{(session.user as any).language.toUpperCase()}] {msg.transcription} (Translated)
+                                                    </span>
+                                                ) : (
+                                                    <span>"{msg.transcription}"</span>
+                                                )}
                                             </div>
                                         )}
                                     </div>

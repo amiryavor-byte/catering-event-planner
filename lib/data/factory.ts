@@ -1,8 +1,4 @@
 import { IDataService } from './types';
-import { SqliteDataService } from './sqlite-service';
-import { ApiDataService } from './api-service';
-import { MockDataService } from './mock-service';
-import { HybridDataService } from './hybrid-service';
 
 // Singleton instance
 let serviceInstance: IDataService | null = null;
@@ -14,16 +10,22 @@ export function getDataService(): IDataService {
 
     try {
         if (mode === 'api') {
+            const { HybridDataService } = require('./hybrid-service');
             console.log('🔌 Using Hybrid Data Service (API + Local Samples)');
             serviceInstance = new HybridDataService();
         } else {
             console.log('📂 Using Local SQLite Data Service (Explicit)');
+            // Use require to avoid top-level import of better-sqlite3 which might break build
+            const { SqliteDataService } = require('./sqlite-service');
             serviceInstance = new SqliteDataService();
         }
     } catch (error) {
-        console.warn('⚠️ Failed to initialize data service, using Mock fallback:', error);
+        console.error('⚠️ Critical Data Service Failure:', error);
+        console.warn('⚠️ Falling back to MockDataService to prevent crash.');
+        // Mock service is safe to import static
+        const { MockDataService } = require('./mock-service');
         serviceInstance = new MockDataService();
     }
 
-    return serviceInstance;
+    return serviceInstance as IDataService;
 }
