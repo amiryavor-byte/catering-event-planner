@@ -9,6 +9,7 @@ import { VersionHistory } from "@/components/business-plan/VersionHistory";
 import { FinancialProjection } from "@/components/business-plan/FinancialProjection";
 import { ExitStrategySection } from "@/components/business-plan/ExitStrategySection";
 import { WorkflowSection } from "@/components/business-plan/WorkflowSection";
+import { SalesPitchSection } from "@/components/business-plan/SalesPitchSection";
 import { BusinessPlanService, BusinessPlanData, BusinessPlanVersion, DEFAULT_PLAN_DATA } from "@/lib/data/business-plan-service";
 import { debounce } from "lodash";
 
@@ -36,6 +37,9 @@ export default function BusinessPlanPage() {
             }
             if (!merged.workflowSteps) {
                 merged.workflowSteps = DEFAULT_PLAN_DATA.workflowSteps;
+            }
+            if (!merged.salesPitch) {
+                merged.salesPitch = DEFAULT_PLAN_DATA.salesPitch;
             }
             setPlanData(merged);
             setLastSaved(new Date(latest.created_at));
@@ -183,7 +187,12 @@ export default function BusinessPlanPage() {
                     <WorkflowSection data={planData} onChange={handleDataChange} />
                 </section>
 
-                {/* Section 4: Exit Strategy */}
+                {/* Section 4: Sales Pitch */}
+                <section className="mb-16">
+                    <SalesPitchSection data={planData} onChange={handleDataChange} />
+                </section>
+
+                {/* Section 5: Exit Strategy */}
                 <section className="mb-16">
                     <ExitStrategySection data={planData} onChange={handleDataChange} />
                 </section>

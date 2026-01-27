@@ -41,7 +41,11 @@ export interface BusinessPlanData {
     workflowSteps: {
         title: string;
         description: string;
+        // Operational Workflow (Editable)
     }[];
+
+    // Sales Strategy (AI Enhanced)
+    salesPitch: string;
 
     // Revenue Strategy
     revenueStrategy: string;
@@ -157,6 +161,8 @@ export const DEFAULT_PLAN_DATA: BusinessPlanData = {
         { title: "Deployment & Customization", description: "Amir deploys code + 10hrs custom styling/config." },
         { title: "Training & Launch", description: "David performs final client training and handover." }
     ],
+
+    salesPitch: "We provide a turnkey, white-label catering platform that puts you in control. Unlike generic SaaS, this is YOUR system, hosted on YOUR infrastructure, giving you complete data ownership and the ability to customize every workflow to match your kitchen's unique rhythm.",
 
     // Default Strategic Content
     revenueStrategy: "The core profitability beyond the initial sale lies in **Paid Upgrades** (The Feature Crowdfunding Model). When a new feature is requested (e.g. AI Menu Gen), we validate it with the user base. If 40 clients prepay $500, Amir builds it once, and we generate $20k pure profit with zero marginal cost.",
