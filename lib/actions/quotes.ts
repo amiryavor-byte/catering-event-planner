@@ -11,7 +11,7 @@ import { QuoteConfig, Event, User, EventMenuItem } from "@/lib/data/types";
 // Remove local QuoteConfig interface since it's now in types
 
 
-export const DEFAULT_QUOTE_CONFIG: QuoteConfig = {
+const DEFAULT_QUOTE_CONFIG: QuoteConfig = {
     depositType: 'percentage',
     depositAmount: 50, // 50%
     sectionsOrder: ['header', 'details', 'menu', 'staff', 'equipment', 'terms', 'payment'],
