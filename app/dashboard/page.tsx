@@ -6,16 +6,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth';
 import { getEvents } from '@/lib/actions/events';
 import { getUsers } from '@/lib/actions/users';
+import { MetricCard } from '@/components/dashboard/MetricCard';
+import { DashboardCalendar } from '@/components/dashboard/DashboardCalendar';
+import { BarChart3, Users, CalendarDays, DollarSign } from 'lucide-react';
 
 function timeAgo(dateString: string | null) {
     if (!dateString) return '';
-    const date = new Date(dateString + 'Z'); // Ensure UTC parsing if needed, but SQLite usually stores as string.
-    // If dateString identifies as local time, this might be off, but for "Z" suffix it's UTC.
-    // Drizzle default(sql`CURRENT_TIMESTAMP`) in SQLite is usually UTC string "YYYY-MM-DD HH:MM:SS" without Z.
-    // So let's handle "YYYY-MM-DD HH:MM:SS" (UTC) -> Local Date.
-    // Actually, safe bet is just new Date(dateString) and hope JS runtime parses it locally or as UTC.
-    // Ideally, we append 'Z' if it's missing to force UTC treatment if DB stores UTC.
-
     const d = new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
     const now = new Date();
     const seconds = Math.floor((now.getTime() - d.getTime()) / 1000);
@@ -42,8 +38,28 @@ export default async function DashboardPage() {
 
     const activities = await getDashboardActivities();
     const allEvents = await getEvents();
+
+    // Calculate Metrics
     const activeEvents = allEvents.filter(e => e.status === 'active').length;
     const pendingQuotes = allEvents.filter(e => e.status === 'quote' || e.status === 'inquiry').length;
+
+    // Mock Revenue Data for Sparkline
+    const revenueData = [
+        { value: 4000 }, { value: 3000 }, { value: 2000 }, { value: 2780 },
+        { value: 1890 }, { value: 2390 }, { value: 3490 }, { value: 5000 },
+        { value: 4500 }, { value: 6000 }, { value: 5500 }, { value: 7000 }
+    ];
+
+    // Transform events for Calendar
+    const calendarEvents = allEvents
+        .filter(e => e.startDate) // Ensure startDate exists
+        .map(e => ({
+            id: String(e.id),
+            title: e.name,
+            start: new Date(e.startDate!),
+            end: new Date(e.endDate || e.startDate!),
+            status: e.status
+        }));
 
     const getColor = (type: string | null) => {
         switch (type) {
@@ -58,69 +74,92 @@ export default async function DashboardPage() {
         <div className={styles.container}>
             <header className={styles.header}>
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Welcome back, {userName.split(' ')[0]}</h1>
-                    <p className="text-slate-400">Here's what's happening today.</p>
+                    <h1 className="text-3xl font-bold mb-2">
+                        Welcome back, <span className="text-gradient">{userName.split(' ')[0]}</span>
+                    </h1>
+                    <p className="text-slate-400">Here is your daily briefing.</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <SampleDataPopover />
                     {role !== 'staff' && (
-                        <Link href="/dashboard/events/new" className="btn-primary">+ New Event</Link>
+                        <Link href="/dashboard/events/new" className="btn-primary flex items-center gap-2">
+                            <span>+ New Event</span>
+                        </Link>
                     )}
                 </div>
             </header>
 
             <div className={styles.statsGrid}>
-                <div className="glass-card-3d">
-                    <h3 className="text-slate-400 text-sm font-medium">Active Events</h3>
-                    <p className="text-4xl font-bold text-white mt-2 text-glow">{activeEvents}</p>
-                    <span className="text-success text-sm">Target: assigned only</span>
-                </div>
-                <div className="glass-card-3d">
-                    <h3 className="text-slate-400 text-sm font-medium">Pending Quotes</h3>
-                    <p className="text-4xl font-bold text-white mt-2 text-glow">{pendingQuotes}</p>
-                    <span className="text-warning text-sm">Action required</span>
-                </div>
+                <MetricCard
+                    title="Revenue"
+                    value="$45,231.89"
+                    trend="+20.1%"
+                    trendLabel="vs last month"
+                    chartData={revenueData}
+                    color="#818cf8"
+                    icon={<DollarSign className="w-5 h-5" />}
+                />
+                <MetricCard
+                    title="Active Events"
+                    value={activeEvents}
+                    trend="+3"
+                    trendLabel="new this week"
+                    icon={<CalendarDays className="w-5 h-5" />}
+                    color="#34d399"
+                    chartData={[{ value: 10 }, { value: 12 }, { value: 15 }, { value: 14 }, { value: 18 }, { value: 20 }]}
+                />
+                <MetricCard
+                    title="Pending Quotes"
+                    value={pendingQuotes}
+                    trend="-2"
+                    trendLabel="action required"
+                    icon={<BarChart3 className="w-5 h-5" />}
+                    color="#fbbf24"
+                />
+
                 {role !== 'staff' && (
-                    <div className="glass-card-3d">
-                        <h3 className="text-slate-400 text-sm font-medium">Total Revenue (Month)</h3>
-                        <p className="text-4xl font-bold text-white mt-2 text-glow">$45.2k</p>
-                        <span className="text-success text-sm">+12% vs last month</span>
-                    </div>
-                )}
-                {role !== 'staff' && (
-                    <div className="glass-card-3d">
-                        <h3 className="text-slate-400 text-sm font-medium">Staff Active</h3>
-                        <p className="text-4xl font-bold text-white mt-2 text-glow">24</p>
-                        <span className="text-slate-500 text-sm">Full team availability</span>
-                    </div>
+                    <MetricCard
+                        title="Staff Active"
+                        value="24"
+                        trend="+100%"
+                        trendLabel="Full Team"
+                        icon={<Users className="w-5 h-5" />}
+                    />
                 )}
             </div>
 
             <div className={styles.contentGrid}>
-                <div className={`glass-card-3d ${styles.mainChart}`}>
-                    <h2 className="text-xl font-semibold mb-4 text-white">Upcoming Events</h2>
-                    <div className="glass-panel p-4 h-64 flex items-center justify-center text-slate-500">
-                        [Calendar / Timeline Placeholder]
+                {/* Main Content Area: Calendar */}
+                <div className={`glass-card-3d ${styles.mainChart} relative flex flex-col`}>
+                    <div className="flex-1 min-h-[500px]">
+                        <DashboardCalendar events={calendarEvents} />
                     </div>
                 </div>
 
-                <div className={`glass-card-3d ${styles.sideList}`}>
-                    <h2 className="text-xl font-semibold mb-4 text-white">Recent Activities</h2>
-                    {activities.length === 0 ? (
-                        <p className="text-slate-500 text-sm">No recent activities.</p>
-                    ) : (
-                        <ul className="space-y-4">
-                            {activities.map((activity) => (
-                                <li key={activity.id} className={styles.activityItem}>
-                                    <div className={styles.statusDot} style={{ background: getColor(activity.type) }} />
-                                    <div>
-                                        <p className="text-white text-sm">{activity.title}</p>
-                                        <p className="text-xs text-slate-500">{timeAgo(activity.createdAt)}</p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                {/* Sidebar: Recent Activity */}
+                <div className={`glass-card-3d ${styles.sideList} flex flex-col`}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+                        <button className="text-xs text-primary hover:text-primary-hover">View All</button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        {activities.length === 0 ? (
+                            <p className="text-slate-500 text-sm text-center py-10">No recent activities.</p>
+                        ) : (
+                            <ul className="space-y-0">
+                                {activities.map((activity) => (
+                                    <li key={activity.id} className={styles.activityItem}>
+                                        <div className={styles.statusDot} style={{ background: getColor(activity.type), boxShadow: `0 0 10px ${getColor(activity.type)}40` }} />
+                                        <div className="flex-1">
+                                            <p className="text-slate-200 text-sm font-medium leading-snug">{activity.title}</p>
+                                            <p className="text-xs text-slate-500 mt-1">{timeAgo(activity.createdAt)}</p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

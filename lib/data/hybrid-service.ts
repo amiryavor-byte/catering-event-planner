@@ -1,4 +1,4 @@
-import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, Menu, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid } from './types';
+import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, Menu, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid, Equipment } from './types';
 import { ApiDataService } from './api-service';
 import { SqliteDataService } from './sqlite-service';
 
@@ -537,5 +537,58 @@ export class HybridDataService implements IDataService {
 
     async sendMessage(data: any): Promise<any> {
         return this.api.sendMessage(data);
+    }
+    async getTasks(eventId?: number, assignedTo?: number): Promise<Task[]> {
+        // Simple routing: Try API, if empty/fail, try local? 
+        // Or assume tasks are partitioned.
+        // For now, return API tasks.
+        return this.api.getTasks(eventId, assignedTo);
+    }
+
+    // Equipment
+    async getEquipment(): Promise<Equipment[]> {
+        // Combine?
+        const local = await this.sqlite.getEquipment();
+        const api = await this.api.getEquipment();
+        return [...api, ...local.map(e => ({ ...e, id: this.toLocalId(e.id) }))];
+    }
+
+    async addEquipment(data: Omit<Equipment, 'id' | 'lastUpdated'>): Promise<Equipment> {
+        // Always local for now since API stubbed?
+        // Or follow convention:
+        return this.sqlite.addEquipment(data).then(e => ({ ...e, id: this.toLocalId(e.id) }));
+    }
+
+    async updateEquipment(id: number, data: Partial<Equipment>): Promise<void> {
+        if (id < 0) return this.sqlite.updateEquipment(this.toOriginalId(id), data);
+        return this.api.updateEquipment(id, data);
+    }
+
+    async deleteEquipment(id: number): Promise<void> {
+        if (id < 0) return this.sqlite.deleteEquipment(this.toOriginalId(id));
+        return this.api.deleteEquipment(id);
+    }
+
+    async removeEventStaff(id: number): Promise<void> {
+        // ID determines source. But eventStaff ids?
+        // Assume negative ID for local.
+        if (id < 0) return this.sqlite.removeEventStaff(this.toOriginalId(id));
+        return this.api.removeEventStaff(id);
+    }
+
+    async addEventEquipment(data: { eventId: number; equipmentId: number; quantity: number; rentalCostOverride?: number }): Promise<void> {
+        if (data.eventId < 0) {
+            return this.sqlite.addEventEquipment({
+                ...data,
+                eventId: this.toOriginalId(data.eventId),
+                equipmentId: this.toOriginalId(data.equipmentId) // assuming equipment also local
+            });
+        }
+        return this.api.addEventEquipment(data);
+    }
+
+    async removeEventEquipment(id: number): Promise<void> {
+        if (id < 0) return this.sqlite.removeEventEquipment(this.toOriginalId(id));
+        return this.api.removeEventEquipment(id);
     }
 }

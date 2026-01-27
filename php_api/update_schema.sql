@@ -46,3 +46,12 @@ ALTER TABLE menus ADD COLUMN IF NOT EXISTS is_sample TINYINT(1) DEFAULT 0;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_sample TINYINT(1) DEFAULT 0;
 ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS is_sample TINYINT(1) DEFAULT 0;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_sample TINYINT(1) DEFAULT 0;
+CREATE TABLE IF NOT EXISTS `equipment` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `type` enum('owned', 'rental') DEFAULT 'owned',
+  `default_rental_cost` float DEFAULT 0,
+  `replacement_cost` float DEFAULT 0,
+  `last_updated` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);

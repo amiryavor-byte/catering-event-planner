@@ -203,3 +203,14 @@ h3,
 h4 {
   letter-spacing: -0.02em;
 }
+
+.text-gradient {
+  background: linear-gradient(to right, #818cf8, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Ensure recharts tooltips don't get hidden */
+.recharts-tooltip-wrapper {
+  z-index: 100;
+}

@@ -173,6 +173,15 @@ export interface ShiftBid {
     notes?: string | null;
 }
 
+export interface Equipment {
+    id: number;
+    name: string;
+    type: 'owned' | 'rental';
+    defaultRentalCost?: number | null;
+    replacementCost?: number | null;
+    lastUpdated?: string | Date | null;
+}
+
 export interface IDataService {
     // Ingredients
     getIngredients(): Promise<Ingredient[]>;
@@ -190,6 +199,7 @@ export interface IDataService {
     resetPassword(id: number): Promise<void>;
 
     // Tasks
+    getTasks(eventId?: number, assignedTo?: number): Promise<Task[]>; // Added
     addTask(data: Omit<Task, 'id'>): Promise<Task>;
 
     // Events
@@ -208,9 +218,18 @@ export interface IDataService {
     // Event Staff
     getEventStaff(eventId: number): Promise<any[]>; // Added
     addEventStaff?(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void>;
+    removeEventStaff?(id: number): Promise<void>; // Added
+
+    // Equipment (Inventory)
+    getEquipment(): Promise<Equipment[]>; // Added
+    addEquipment(data: Omit<Equipment, 'id' | 'lastUpdated'>): Promise<Equipment>; // Added
+    updateEquipment(id: number, data: Partial<Equipment>): Promise<void>; // Added
+    deleteEquipment(id: number): Promise<void>; // Added
 
     // Event Equipment
     getEventEquipment(eventId: number): Promise<any[]>; // Added
+    addEventEquipment(data: { eventId: number; equipmentId: number; quantity: number; rentalCostOverride?: number }): Promise<void>; // Added
+    removeEventEquipment(id: number): Promise<void>; // Added
 
     // Menus
     getMenus(): Promise<Menu[]>;

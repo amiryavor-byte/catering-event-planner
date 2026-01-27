@@ -131,8 +131,11 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                <div className={styles.footer}>
+                <div className={styles.footer} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <p>Catering Management System</p>
+                    <Link href="/partner-demo" className="text-xs text-primary hover:underline">
+                        View Partner Demo & Feature Tour
+                    </Link>
                 </div>
             </div>
         </div>

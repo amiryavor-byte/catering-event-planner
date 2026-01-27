@@ -1,36 +1,28 @@
 'use server'
 
-import { db } from '@/lib/db';
-import { ingredients } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
+// STUBBED FOR VERCEL DEPLOYMENT
+// Direct DB access removed.
 
-export async function getIngredients() {
-    return await db.select().from(ingredients).orderBy(desc(ingredients.lastUpdated));
+export interface Ingredient {
+    id: number;
+    name: string;
+    unit: string;
+    pricePerUnit: number;
+    supplierUrl: string | null;
+    lastUpdated: string | Date | null;
+    isSample?: boolean;
+}
+
+export async function getIngredients(): Promise<Ingredient[]> {
+    return [];
 }
 
 export async function addIngredient(formData: FormData) {
-    const name = formData.get('name') as string;
-    const unit = formData.get('unit') as string;
-    const price = parseFloat(formData.get('price') as string);
-    const supplierUrl = formData.get('supplierUrl') as string;
-
-    await db.insert(ingredients).values({
-        name,
-        unit,
-        pricePerUnit: price,
-        supplierUrl,
-    });
-
-    revalidatePath('/dashboard/ingredients');
+    // No-op
 }
 
 export async function updateIngredientPrice(id: number, newPrice: number) {
-    await db.update(ingredients)
-        .set({ pricePerUnit: newPrice, lastUpdated: new Date().toISOString() })
-        .where(eq(ingredients.id, id));
-
-    revalidatePath('/dashboard/ingredients');
+    // No-op
 }
 
 // AI Feature Mock

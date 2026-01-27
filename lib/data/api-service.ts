@@ -1,4 +1,4 @@
-import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid, Message } from './types';
+import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid, Message, Equipment } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.jewishingenuity.com/catering_app';
 
@@ -184,8 +184,21 @@ export class ApiDataService implements IDataService {
     }
 
     async getEventStaff(eventId: number): Promise<any[]> {
-        // Mock or implement if API supports it
-        return [];
+        return this.fetchJson(`/event_staff.php?event_id=${eventId}`);
+    }
+
+    async addEventStaff(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void> {
+        await this.fetchJson('/event_staff.php', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    async removeEventStaff(id: number): Promise<void> {
+        await this.fetchJson(`/event_staff.php?id=${id}`, {
+            method: 'DELETE'
+        });
     }
 
     async getEventEquipment(eventId: number): Promise<any[]> {
@@ -420,5 +433,52 @@ export class ApiDataService implements IDataService {
             });
             return res.data;
         }
+    }
+    async getTasks(eventId?: number, assignedTo?: number): Promise<Task[]> {
+        let query = '?';
+        if (eventId) query += `&event_id=${eventId}`;
+        if (assignedTo) query += `&assigned_to=${assignedTo}`;
+        return this.fetchJson(`/tasks.php${query}`);
+    }
+
+    // Equipment (Inventory) - Stubs
+    async getEquipment(): Promise<Equipment[]> {
+        return this.fetchJson('/equipment.php');
+    }
+
+    async addEquipment(data: Omit<Equipment, 'id' | 'lastUpdated'>): Promise<Equipment> {
+        const res = await this.fetchJson('/equipment.php', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        return {
+            id: res.id,
+            ...data,
+            lastUpdated: new Date().toISOString() // Optimistic
+        };
+    }
+
+    async updateEquipment(id: number, data: Partial<Equipment>): Promise<void> {
+        await this.fetchJson('/equipment.php', {
+            method: 'PUT',
+            body: JSON.stringify({ id, ...data }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    async deleteEquipment(id: number): Promise<void> {
+        await this.fetchJson(`/equipment.php?id=${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // Event Equipment - Stub
+    async addEventEquipment(data: { eventId: number; equipmentId: number; quantity: number; rentalCostOverride?: number }): Promise<void> {
+        // Stub
+    }
+
+    async removeEventEquipment(id: number): Promise<void> {
+        // Stub
     }
 }

@@ -1,7 +1,7 @@
 'use server'
 
 import { getDataService } from '@/lib/data/factory';
-import { SqliteDataService } from '@/lib/data/sqlite-service';
+
 import { revalidatePath } from 'next/cache';
 
 // =========================
@@ -459,6 +459,7 @@ export async function generateSampleData() {
         }
 
         // 5. Add Menu Items & Recipes
+        const newMenuItemIds: number[] = [];
         const menuItemsToAdd = [
             ...MEAT_MENU_ITEMS.map(item => ({ ...item, menuId: menuIds['meat'] })),
             ...DAIRY_MENU_ITEMS.map(item => ({ ...item, menuId: menuIds['dairy'] })),
@@ -484,6 +485,7 @@ export async function generateSampleData() {
                     isSample: true
                 });
                 results.menuItems++;
+                newMenuItemIds.push(createdItem.id);
 
                 // Add 3-5 random ingredients as a recipe
                 if (ingredientIds.length > 0) {
@@ -505,54 +507,65 @@ export async function generateSampleData() {
             }
         }
 
-        // 6. Add Events
+        // 6. Add Events (Extended - 4 Months)
         // Get all clients to assign random clients to events
-        // (In a real implementation we would fetch them, but for now we rely on the ones we just added if we knew their IDs, 
-        //  but since we don't return IDs from addClient easily here without refetching, we will mock or skip client assignment 
-        //  OR we can try to fetch users by role 'client' first).
-
-        // For simplicity, we will just create events without linking to specific new clients 
-        // unless we want to fetch them. Let's fetch them to be safe.
         const allUsers = await service.getUsers();
         const clientUsers = allUsers.filter(u => u.role === 'client');
 
-        for (const [index, event] of SAMPLE_EVENTS.entries()) {
+        // Generate more events for 4 months
+        const targetEventCount = 25;
+
+        for (let i = 0; i < targetEventCount; i++) {
+            // Pick a random template or generate one
+            const template = SAMPLE_EVENTS[i % SAMPLE_EVENTS.length];
+
             try {
                 // Assign a random client if available
                 const assignedClient = clientUsers.length > 0
-                    ? clientUsers[index % clientUsers.length]
+                    ? getRandomElement(clientUsers)
                     : null;
 
-                // Set dates relative to now
+                // Set dates scattered over next 120 days (4 months)
                 const today = new Date();
-                let startDate = new Date();
-                let endDate = new Date();
+                const daysOffset = Math.floor(Math.random() * 120); // 0 to 119 days
 
-                if (event.status === 'completed') {
-                    startDate.setDate(today.getDate() - 7); // Last week
-                    endDate.setDate(today.getDate() - 7);
-                } else if (event.status === 'active') {
-                    startDate.setDate(today.getDate() + 2); // In 2 days
-                    endDate.setDate(today.getDate() + 2);
-                } else {
-                    startDate.setDate(today.getDate() + 14 + (index * 7)); // Future
-                    endDate.setDate(today.getDate() + 14 + (index * 7));
+                let startDate = new Date(today);
+                startDate.setDate(today.getDate() + daysOffset);
+
+                // If it's "today", make it specifically today for testing active events
+                if (i === 0) {
+                    startDate = new Date(today);
                 }
 
-                // Set hours
-                startDate.setHours(18, 0, 0, 0); // 6 PM
-                endDate.setHours(23, 0, 0, 0);   // 11 PM
+                let endDate = new Date(startDate);
+
+                // Set hours (Evening events mostly)
+                startDate.setHours(17 + Math.floor(Math.random() * 3), 0, 0, 0); // 5-7 PM
+                endDate.setHours(startDate.getHours() + 4 + Math.floor(Math.random() * 2), 0, 0, 0); // 4-6 hours duration
+
+                // Determine status based on date
+                let status = 'inquiry';
+                const daysFromNow = (startDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
+
+                if (daysFromNow < 0) status = 'completed';
+                else if (daysFromNow < 7) status = 'active'; // This week
+                else if (daysFromNow < 30) status = 'approved';
+                else if (daysFromNow < 60) status = 'quote';
+                else status = 'inquiry';
+
+                // Override simple status for variety
+                if (Math.random() > 0.8) status = 'cancelled';
 
                 const newEvent = await service.addEvent({
-                    name: event.name,
-                    eventType: event.eventType,
-                    status: event.status as any,
-                    isOutdoors: event.isOutdoors,
-                    location: event.location,
-                    guestCount: event.guestCount,
-                    dietaryRequirements: event.dietaryRequirements,
-                    estimatedBudget: event.estimatedBudget,
-                    notes: event.notes,
+                    name: i === 0 ? "Today's Test Event" : `${template.name} ${i + 1}`,
+                    eventType: template.eventType,
+                    status: status as any,
+                    isOutdoors: Math.random() > 0.7 ? true : false,
+                    location: template.location,
+                    guestCount: Math.floor(Math.random() * 200) + 50,
+                    dietaryRequirements: template.dietaryRequirements,
+                    estimatedBudget: Math.floor(Math.random() * 50000) + 5000,
+                    notes: template.notes,
                     clientId: assignedClient ? assignedClient.id : null,
                     startDate: startDate.toISOString(),
                     endDate: endDate.toISOString(),
@@ -560,9 +573,52 @@ export async function generateSampleData() {
                 });
                 results.events++;
                 newEventIds.push(newEvent.id);
+
+                // Assign Staff to this event (Strict requirement)
+                if (newStaffIds.length > 0 && service.addEventStaff) {
+                    const numStaff = Math.floor(Math.random() * 3) + 2; // 2 to 4 staff per event
+                    const selectedStaff = new Set<number>();
+
+                    // Try to pick unique staff
+                    let attempts = 0;
+                    while (selectedStaff.size < Math.min(numStaff, newStaffIds.length) && attempts < 20) {
+                        const sId = getRandomElement(newStaffIds);
+                        selectedStaff.add(sId);
+                        attempts++;
+                    }
+
+                    for (const sId of selectedStaff) {
+                        const roles = ['Server', 'Bartender', 'Chef', 'Event Manager'];
+                        await service.addEventStaff({
+                            eventId: newEvent.id,
+                            userId: sId,
+                            role: getRandomElement(roles),
+                            shiftStart: startDate.toISOString(),
+                            shiftEnd: endDate.toISOString()
+                        });
+                    }
+                }
+
+                // Assign Menu Items to this event (Strict requirement)
+                if (newMenuItemIds.length > 0 && service.addEventMenuItem) {
+                    const numItems = Math.floor(Math.random() * 4) + 3; // 3 to 7 items
+                    const selectedItems = new Set<number>();
+                    while (selectedItems.size < Math.min(numItems, newMenuItemIds.length)) {
+                        selectedItems.add(getRandomElement(newMenuItemIds));
+                    }
+
+                    for (const mId of selectedItems) {
+                        await service.addEventMenuItem({
+                            eventId: newEvent.id,
+                            menuItemId: mId,
+                            quantity: Math.floor(Math.random() * 50) + 10
+                        });
+                    }
+                }
+
             } catch (e) {
-                console.error('Failed to add event:', event.name, e);
-                results.errors.push(`Failed to add event: ${event.name}`);
+                console.error('Failed to add event:', i, e);
+                results.errors.push(`Failed to add event index ${i}`);
             }
         }
 
@@ -791,7 +847,8 @@ export async function generateSampleData() {
         return {
             success: results.errors.length === 0,
             results,
-            message: successMsg + errorMsg
+            message: successMsg + errorMsg,
+            error: results.errors.length > 0 ? results.errors[0] : undefined
         };
 
     } catch (error) {

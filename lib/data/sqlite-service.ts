@@ -1,14 +1,14 @@
 import { db } from '@/lib/db';
-import { ingredients, users, tasks, menuItems, recipes, events, menus, staffAvailability, blackoutDates, openShifts, shiftBids, eventMenuItems, eventStaff } from '@/lib/db/schema';
+import { ingredients, users, tasks, menuItems, recipes, events, menus, staffAvailability, blackoutDates, openShifts, shiftBids, eventMenuItems, eventStaff, equipment, eventEquipment } from '@/lib/db/schema';
 import { desc, eq, sql as drizzleSql, and, gte, lte, sum } from 'drizzle-orm';
-import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, Menu, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid } from './types';
+import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, Menu, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid, Equipment } from './types';
 
 export class SqliteDataService implements IDataService {
 
     async getIngredients(): Promise<Ingredient[]> {
         try {
             const rows = await db.select().from(ingredients).orderBy(desc(ingredients.lastUpdated));
-            return rows.map(row => ({
+            return rows.map((row: any) => ({
                 ...row,
                 // Ensure strict type compatibility if Drizzle returns varied types
                 lastUpdated: row.lastUpdated || null,
@@ -93,6 +93,17 @@ export class SqliteDataService implements IDataService {
         // Placeholder for real logic (e.g. sending email, generating temp pass)
     }
 
+    async getTasks(eventId?: number, assignedTo?: number): Promise<Task[]> {
+        const conditions = [];
+        if (eventId) conditions.push(eq(tasks.eventId, eventId));
+        if (assignedTo) conditions.push(eq(tasks.assignedTo, assignedTo));
+
+        const query = db.select().from(tasks)
+            .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+        return await query as Task[];
+    }
+
     async addTask(data: Omit<Task, 'id'>): Promise<Task> {
         const result = await db.insert(tasks).values({
             ...data,
@@ -100,6 +111,33 @@ export class SqliteDataService implements IDataService {
         }).returning();
         // @ts-ignore
         return result[0];
+    }
+
+    // Equipment (Inventory)
+    async getEquipment(): Promise<Equipment[]> {
+        const rows = await db.select().from(equipment);
+        return rows.map((row: any) => ({
+            ...row,
+            defaultRentalCost: row.defaultRentalCost || null,
+            replacementCost: row.replacementCost || null,
+            lastUpdated: row.lastUpdated || null
+        })) as Equipment[];
+    }
+
+    async addEquipment(data: Omit<Equipment, 'id' | 'lastUpdated'>): Promise<Equipment> {
+        const result = await db.insert(equipment).values(data).returning();
+        return result[0] as Equipment;
+    }
+
+    async updateEquipment(id: number, data: Partial<Equipment>): Promise<void> {
+        await db.update(equipment).set({
+            ...data,
+            lastUpdated: new Date().toISOString()
+        }).where(eq(equipment.id, id));
+    }
+
+    async deleteEquipment(id: number): Promise<void> {
+        await db.delete(equipment).where(eq(equipment.id, id));
     }
 
     // Menus
@@ -269,18 +307,26 @@ export class SqliteDataService implements IDataService {
     }
 
     async getEventStaff(eventId: number): Promise<any[]> {
-        const { eventStaff } = await import('@/lib/db/schema');
-        const rows = await db.select().from(eventStaff).where(eq(eventStaff.eventId, eventId));
+        const rows = await db.select({
+            id: eventStaff.id,
+            eventId: eventStaff.eventId,
+            userId: eventStaff.userId,
+            role: eventStaff.role,
+            user: {
+                name: users.name,
+                email: users.email,
+                jobTitle: users.jobTitle,
+                hourlyRate: users.hourlyRate,
+            },
+        })
+            .from(eventStaff)
+            .leftJoin(users, eq(eventStaff.userId, users.id))
+            .where(eq(eventStaff.eventId, eventId));
+
         return rows;
     }
 
-    async getEventEquipment(eventId: number): Promise<any[]> {
-        // Implement if schema exists
-        return [];
-    }
-
     async addEventStaff(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void> {
-        const { eventStaff } = await import('@/lib/db/schema');
         await db.insert(eventStaff).values({
             eventId: data.eventId,
             userId: data.userId,
@@ -290,11 +336,43 @@ export class SqliteDataService implements IDataService {
         });
     }
 
+    async removeEventStaff(id: number): Promise<void> {
+        await db.delete(eventStaff).where(eq(eventStaff.id, id));
+    }
+
+    async getEventEquipment(eventId: number): Promise<any[]> {
+        return await db
+            .select({
+                id: eventEquipment.id,
+                eventId: eventEquipment.eventId,
+                equipmentId: eventEquipment.equipmentId,
+                quantity: eventEquipment.quantity,
+                rentalCostOverride: eventEquipment.rentalCostOverride,
+                item: {
+                    name: equipment.name,
+                    type: equipment.type,
+                    defaultRentalCost: equipment.defaultRentalCost,
+                    replacementCost: equipment.replacementCost,
+                },
+            })
+            .from(eventEquipment)
+            .leftJoin(equipment, eq(eventEquipment.equipmentId, equipment.id))
+            .where(eq(eventEquipment.eventId, eventId));
+    }
+
+    async addEventEquipment(data: { eventId: number; equipmentId: number; quantity: number; rentalCostOverride?: number }): Promise<void> {
+        await db.insert(eventEquipment).values(data);
+    }
+
+    async removeEventEquipment(id: number): Promise<void> {
+        await db.delete(eventEquipment).where(eq(eventEquipment.id, id));
+    }
+
     // Menu Collections
     async getMenus(): Promise<Menu[]> {
         try {
             const rows = await db.select().from(menus);
-            return rows.map(row => ({
+            return rows.map((row: any) => ({
                 ...row,
                 isActive: row.isActive ?? undefined,
                 isSample: row.isSample === true
@@ -336,7 +414,7 @@ export class SqliteDataService implements IDataService {
 
             const rows = await query;
 
-            return rows.map(({ item, calculatedCost }) => ({
+            return rows.map(({ item, calculatedCost }: any) => ({
                 ...item,
                 calculatedCost: calculatedCost || 0,
                 isKosher: item.isKosher ?? undefined,
@@ -433,7 +511,7 @@ export class SqliteDataService implements IDataService {
             .where(conditions.length > 0 ? and(...conditions) : undefined);
 
         const rows = await query;
-        return rows.map(r => ({
+        return rows.map((r: any) => ({
             ...r,
             isRecurring: r.isRecurring === true
         })) as StaffAvailability[];
@@ -474,7 +552,7 @@ export class SqliteDataService implements IDataService {
             query = query.where(lte(blackoutDates.date, endDate));
         }
         const rows = await query;
-        return rows.map(r => ({
+        return rows.map((r: any) => ({
             ...r,
             isGlobal: r.isGlobal === true
         })) as BlackoutDate[];
