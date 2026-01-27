@@ -214,14 +214,16 @@ export interface IDataService {
 
     // Event Menu Items
     getEventMenuItems(eventId: number): Promise<EventMenuItem[]>; // Made required
-    addEventMenuItem?(data: Omit<EventMenuItem, 'id'>): Promise<EventMenuItem>;
-    updateEventMenuItem?(id: number, data: Partial<EventMenuItem>): Promise<void>;
-    deleteEventMenuItem?(id: number): Promise<void>;
+    addEventMenuItem(data: Omit<EventMenuItem, 'id'>): Promise<EventMenuItem>;
+    updateEventMenuItem(id: number, data: Partial<EventMenuItem>): Promise<void>;
+    deleteEventMenuItem(id: number): Promise<void>;
+
 
     // Event Staff
     getEventStaff(eventId: number): Promise<any[]>; // Added
-    addEventStaff?(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void>;
-    removeEventStaff?(id: number): Promise<void>; // Added
+    addEventStaff(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void>;
+    removeEventStaff(id: number): Promise<void>; // Added
+
 
     // Equipment (Inventory)
     getEquipment(): Promise<Equipment[]>; // Added
