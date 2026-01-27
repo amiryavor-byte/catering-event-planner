@@ -1,15 +1,27 @@
 import { IDataService, Ingredient, User, Task, MenuItem, RecipeItem, Event, Menu, EventMenuItem, StaffAvailability, BlackoutDate, OpenShift, ShiftBid, Equipment } from './types';
 import { ApiDataService } from './api-service';
-import { SqliteDataService } from './sqlite-service';
+// import { SqliteDataService } from './sqlite-service'; // REMOVED STATIC IMPORT
+
 
 export class HybridDataService implements IDataService {
     private api: ApiDataService;
-    private sqlite: SqliteDataService;
+    private sqlite: IDataService;
+
 
     constructor() {
         this.api = new ApiDataService();
-        this.sqlite = new SqliteDataService();
+
+        // Dynamically load SQLite service to prevent Vercel build crash
+        if (process.env.VERCEL === '1') {
+            // Fallback to mock on serverless
+            const { MockDataService } = require('./mock-service');
+            this.sqlite = new MockDataService();
+        } else {
+            const { SqliteDataService } = require('./sqlite-service');
+            this.sqlite = new SqliteDataService();
+        }
     }
+
 
     private toLocalId(id: number): number {
         return id > 0 ? -id : id;

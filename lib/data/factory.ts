@@ -9,11 +9,12 @@ export function getDataService(): IDataService {
     let mode = process.env.API_MODE || 'sqlite'; // 'sqlite' | 'api'
 
     // Auto-detect production environment (Vercel)
-    // DISABLED FOR DEMO - FORCE SQLITE
-    // if (process.env.VERCEL === '1') {
-    //     mode = 'api'; 
-    // }
-    mode = 'sqlite'; // HARDCODE FOR DEMO
+    // Auto-detect production environment (Vercel)
+    if (process.env.VERCEL === '1') {
+        mode = 'api';
+    }
+    // mode = 'sqlite'; // HARDCODE REMOVED
+
 
     try {
         if (mode === 'api') {
