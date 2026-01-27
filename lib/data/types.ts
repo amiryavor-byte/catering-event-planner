@@ -48,6 +48,9 @@ export interface Task {
     status: 'pending' | 'in_progress' | 'done';
     assignedTo: number | null;
     eventId?: number | null;
+    startTime?: string | null;
+    dueTime?: string | null;
+    location?: string | null;
     isSample?: boolean;
 }
 

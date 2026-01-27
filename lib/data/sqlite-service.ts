@@ -28,11 +28,12 @@ export class SqliteDataService implements IDataService {
             pricePerUnit: data.pricePerUnit,
             supplierUrl: data.supplierUrl,
             isSample: data.isSample || false
-        }).returning();
+        }).run();
 
-        // SQLite returns array, MySQL might not support .returning() the same way, 
-        // but for Local SQLite this is fine.
-        const row = result[0];
+        const id = Number(result.lastInsertRowid);
+        const request = await db.select().from(ingredients).where(eq(ingredients.id, id));
+        const row = request[0];
+
         return {
             ...row,
             lastUpdated: row.lastUpdated || null,
@@ -75,9 +76,12 @@ export class SqliteDataService implements IDataService {
         const result = await db.insert(users).values({
             ...data,
             isSample: data.isSample || false
-        }).returning();
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(users).where(eq(users.id, id));
         // @ts-ignore
-        return result[0];
+        return rows[0];
     }
 
     async updateUser(id: number, data: Partial<User>): Promise<void> {
@@ -107,10 +111,13 @@ export class SqliteDataService implements IDataService {
     async addTask(data: Omit<Task, 'id'>): Promise<Task> {
         const result = await db.insert(tasks).values({
             ...data,
-            assignedTo: data.assignedTo ?? null
-        }).returning();
-        // @ts-ignore
-        return result[0];
+            assignedTo: data.assignedTo ?? null,
+            isSample: data.isSample || false
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(tasks).where(eq(tasks.id, id));
+        return rows[0] as Task;
     }
 
     // Equipment (Inventory)
@@ -125,8 +132,11 @@ export class SqliteDataService implements IDataService {
     }
 
     async addEquipment(data: Omit<Equipment, 'id' | 'lastUpdated'>): Promise<Equipment> {
-        const result = await db.insert(equipment).values(data).returning();
-        return result[0] as Equipment;
+        const result = await db.insert(equipment).values(data).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(equipment).where(eq(equipment.id, id));
+        return rows[0] as Equipment;
     }
 
     async updateEquipment(id: number, data: Partial<Equipment>): Promise<void> {
@@ -147,8 +157,12 @@ export class SqliteDataService implements IDataService {
         const result = await db.insert(menuItems).values({
             ...data,
             isSample: data.isSample || false
-        }).returning();
-        const row = result[0];
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(menuItems).where(eq(menuItems.id, id));
+        const row = rows[0];
+
         return {
             ...row,
             isKosher: row.isKosher ?? undefined,
@@ -234,9 +248,13 @@ export class SqliteDataService implements IDataService {
             ...payload,
             eventType: payload.eventType as any,
             isSample: payload.isSample || false
-        }).returning();
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(events).where(eq(events.id, id));
+
         // @ts-ignore
-        return result[0];
+        return rows[0];
     }
 
     async updateEvent(id: number, data: Partial<Event>): Promise<void> {
@@ -291,9 +309,12 @@ export class SqliteDataService implements IDataService {
             quantity: data.quantity,
             priceOverride: data.priceOverride,
             notes: data.notes
-        }).returning();
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(eventMenuItems).where(eq(eventMenuItems.id, id));
         // @ts-ignore
-        return result[0];
+        return rows[0];
     }
 
     async updateEventMenuItem(id: number, data: Partial<EventMenuItem>): Promise<void> {
@@ -387,8 +408,12 @@ export class SqliteDataService implements IDataService {
         const result = await db.insert(menus).values({
             ...data,
             isSample: data.isSample || false
-        }).returning();
-        const row = result[0];
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(menus).where(eq(menus.id, id));
+        const row = rows[0];
+
         return {
             ...row,
             isActive: row.isActive ?? undefined
@@ -450,42 +475,33 @@ export class SqliteDataService implements IDataService {
 
     async clearSampleData(): Promise<void> {
         try {
-            // Only delete rows marked as sample
-            // Note: Recipes are deleted via cascade or simplistic assumption they belong to sample menu items.
-            // Since recipes don't have is_sample, we rely on them being deleted if we delete menu items?
-            // SQLite doesn't always cascade by default unless enabled. 
-            // Better to select IDs first or just rely on 'orphaned' recipes logic later.
-            // For now, we will add 'is_sample' to recipes implicitly by association? No, we added is_sample to tables.
-            // Wait, I didn't add is_sample to recipes in the migration. 
-            // "users, events, menus, menu_items, ingredients, tasks"
+            // Disable Foreign Keys temporarily to allow deletion regardless of order or orphans
+            await db.run(drizzleSql`PRAGMA foreign_keys = OFF`);
 
-            // Delete Menu Items (Sample)
-            // 1. Delete deeply nested / leaf nodes first
-            // Note: We use raw SQL for performance and to handle subqueries that Drizzle might simplify too much
+            // ... (Deletions) ...
 
             // Availability & Blackout Dates (Linked to Users)
             await db.run(drizzleSql`DELETE FROM ${staffAvailability} WHERE user_id IN (SELECT id FROM ${users} WHERE is_sample = 1)`);
             await db.run(drizzleSql`DELETE FROM ${blackoutDates} WHERE created_by IN (SELECT id FROM ${users} WHERE is_sample = 1) OR user_id IN (SELECT id FROM ${users} WHERE is_sample = 1) OR is_global = 1`);
-            // await db.run(drizzleSql`DELETE FROM ${notifications} WHERE user_id IN (SELECT id FROM ${users} WHERE is_sample = 1)`);
 
-            // Shifts & Bids (Linked to Events and Users)
+            // Shifts & Bids 
             await db.run(drizzleSql`DELETE FROM ${shiftBids} WHERE shift_id IN (SELECT id FROM ${openShifts} WHERE event_id IN (SELECT id FROM ${events} WHERE is_sample = 1)) OR user_id IN (SELECT id FROM ${users} WHERE is_sample = 1)`);
             await db.run(drizzleSql`DELETE FROM ${openShifts} WHERE event_id IN (SELECT id FROM ${events} WHERE is_sample = 1)`);
 
-            // Event Junctions (Linked to Events and Users)
+            // Event Junctions 
             await db.run(drizzleSql`DELETE FROM ${eventMenuItems} WHERE event_id IN (SELECT id FROM ${events} WHERE is_sample = 1)`);
             await db.run(drizzleSql`DELETE FROM ${eventStaff} WHERE event_id IN (SELECT id FROM ${events} WHERE is_sample = 1) OR user_id IN (SELECT id FROM ${users} WHERE is_sample = 1)`);
-            // await db.run(drizzleSql`DELETE FROM ${guests} WHERE event_id IN (SELECT id FROM ${events} WHERE is_sample = 1)`);
-            // await db.run(drizzleSql`DELETE FROM ${eventEquipment} WHERE event_id IN (SELECT id FROM ${events} WHERE is_sample = 1)`);
 
-            // Recipes (Linked to Menu Items) 
-            // Also handle orphaned recipes if ingredients are deleted
+            // Also delete ANY tasks linked to sample events, even if they aren't marked sample themselves (fix for orphans)
+            await db.run(drizzleSql`DELETE FROM ${tasks} WHERE event_id IN (SELECT id FROM ${events} WHERE is_sample = 1)`);
+            await db.run(drizzleSql`DELETE FROM ${tasks} WHERE is_sample = 1`);
+
+            // Recipes 
             await db.run(drizzleSql`DELETE FROM ${recipes} WHERE menu_item_id IN (SELECT id FROM ${menuItems} WHERE is_sample = 1) OR ingredient_id IN (SELECT id FROM ${ingredients} WHERE is_sample = 1)`);
 
-            // 2. Delete Main Entities
+            // Main Entities
             await db.delete(menuItems).where(eq(menuItems.isSample, true));
             await db.delete(menus).where(eq(menus.isSample, true));
-            await db.delete(tasks).where(eq(tasks.isSample, true));
             await db.delete(events).where(eq(events.isSample, true));
             await db.delete(users).where(eq(users.isSample, true));
             await db.delete(ingredients).where(eq(ingredients.isSample, true));
@@ -494,6 +510,9 @@ export class SqliteDataService implements IDataService {
         } catch (error) {
             console.error('Failed to clear sample data:', error);
             throw error;
+        } finally {
+            // Re-enable Foreign Keys
+            await db.run(drizzleSql`PRAGMA foreign_keys = ON`);
         }
     }
 
@@ -521,8 +540,12 @@ export class SqliteDataService implements IDataService {
         const result = await db.insert(staffAvailability).values({
             ...data,
             isRecurring: data.isRecurring || false
-        }).returning();
-        const row = result[0];
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(staffAvailability).where(eq(staffAvailability.id, id));
+        const row = rows[0];
+
         return {
             ...row,
             isRecurring: row.isRecurring === true
@@ -562,8 +585,12 @@ export class SqliteDataService implements IDataService {
         const result = await db.insert(blackoutDates).values({
             ...data,
             isGlobal: data.isGlobal || false
-        }).returning();
-        const row = result[0];
+        }).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(blackoutDates).where(eq(blackoutDates.id, id));
+        const row = rows[0];
+
         return {
             ...row,
             isGlobal: row.isGlobal === true
@@ -585,8 +612,11 @@ export class SqliteDataService implements IDataService {
     }
 
     async addOpenShift(data: Omit<OpenShift, 'id' | 'createdAt'>): Promise<OpenShift> {
-        const result = await db.insert(openShifts).values(data).returning();
-        return result[0] as OpenShift;
+        const result = await db.insert(openShifts).values(data).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(openShifts).where(eq(openShifts.id, id));
+        return rows[0] as OpenShift;
     }
 
     async updateOpenShift(id: number, data: Partial<OpenShift>): Promise<void> {
@@ -613,8 +643,11 @@ export class SqliteDataService implements IDataService {
     }
 
     async addShiftBid(data: Omit<ShiftBid, 'id' | 'bidTime'>): Promise<ShiftBid> {
-        const result = await db.insert(shiftBids).values(data).returning();
-        return result[0] as ShiftBid;
+        const result = await db.insert(shiftBids).values(data).run();
+
+        const id = Number(result.lastInsertRowid);
+        const rows = await db.select().from(shiftBids).where(eq(shiftBids.id, id));
+        return rows[0] as ShiftBid;
     }
 
     async updateShiftBid(id: number, data: Partial<ShiftBid>): Promise<void> {

@@ -7,10 +7,10 @@ require("dotenv").config({ path: ".env.local" });
 require("dotenv").config();
 
 const LOCAL_ROOT = path.join(__dirname, "../php_api");
-const REMOTE_ROOT = process.env.FTP_REMOTE_ROOT || "/public_html/website_f7ca0a43/catering_app";
+const REMOTE_ROOT = process.env.FTP_REMOTE_ROOT || "/public_html/catering_app";
 const HEALTH_CHECK_URL = process.env.NEXT_PUBLIC_API_URL
     ? `${process.env.NEXT_PUBLIC_API_URL}/company.php`
-    : "https://api.jewishingenuity.com/catering_app/company.php";
+    : "https://api.jewishingenuity.com/catering_app/company.php"; // Will work after DNS propagates
 
 async function deploy() {
     const client = new ftp.Client();
@@ -23,12 +23,12 @@ async function deploy() {
 
         // Check for required env vars
         // Default to the known IP from DEPLOYMENT.md if no host is set
-        const host = "50.6.108.166"; // Updated from 75.203.51.130 based on new DNS resolution
+        const host = "sh00078.hostgator.com"; // Updated from 75.203.51.130 based on new DNS resolution
         const user = process.env.FTP_USER;
         const password = process.env.FTP_PASSWORD || process.env.FTP_PASS;
 
         // Remote path fallback
-        const remoteRoot = process.env.FTP_REMOTE_ROOT || "/public_html/website_f7ca0a43/catering_app";
+        const remoteRoot = process.env.FTP_REMOTE_ROOT || "/public_html/catering_app";
 
         if (!user || !password) {
             throw new Error("❌ Missing FTP credentials (FTP_USER, FTP_PASSWORD)");

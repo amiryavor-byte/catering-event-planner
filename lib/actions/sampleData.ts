@@ -438,7 +438,7 @@ export async function generateSampleData() {
                 results.menus++;
             } catch (e) {
                 console.error('Failed to add menu:', menu.name, e);
-                results.errors.push(`Failed to add menu: ${menu.name}`);
+                results.errors.push(`Failed to add menu: ${menu.name} - ${(e as Error).message}`);
             }
         }
 
@@ -466,7 +466,8 @@ export async function generateSampleData() {
             ...PARVE_MENU_ITEMS.map(item => ({ ...item, menuId: menuIds['parve'] })),
             ...GLUTEN_FREE_MENU_ITEMS.map(item => ({ ...item, menuId: menuIds['glutenfree'] })),
             ...VEGAN_MENU_ITEMS.map(item => ({ ...item, menuId: menuIds['vegan'] })),
-        ];
+        ].filter(item => item.menuId !== undefined); // CRITICAL FIX: Skip items if their parent menu failed to create
+
 
         for (const item of menuItemsToAdd) {
             try {
@@ -589,13 +590,42 @@ export async function generateSampleData() {
 
                     for (const sId of selectedStaff) {
                         const roles = ['Server', 'Bartender', 'Chef', 'Event Manager'];
+                        const role = getRandomElement(roles);
                         await service.addEventStaff({
                             eventId: newEvent.id,
                             userId: sId,
-                            role: getRandomElement(roles),
+                            role: role,
                             shiftStart: startDate.toISOString(),
                             shiftEnd: endDate.toISOString()
                         });
+
+                        // 7a. Add Tasks for this Staff Member (User Request)
+                        if (service.addTask) {
+                            const TASKS_BY_ROLE: Record<string, string[]> = {
+                                'Server': ['Set up tables', 'Polish silverware', 'Serve appetizers', 'Clear tables', 'Water service'],
+                                'Bartender': ['Stock bar', 'Cut garnishes', 'Mix signature cocktails', 'Clean bar area', 'Inventory check'],
+                                'Chef': ['Prep ingredients', 'Plate main course', 'Monitor oven temps', 'Garnish plates', 'Clean station'],
+                                'Event Manager': ['Coordinate timeline', 'Greet VIPs', 'Brief staff', 'Handle vendor queries', 'Final walkthrough']
+                            };
+
+                            const possibleTasks = TASKS_BY_ROLE[role] || ['General assistance', 'Setup', 'Cleanup'];
+                            const numTasks = Math.floor(Math.random() * 2) + 1; // 1-2 tasks per person
+
+                            for (let t = 0; t < numTasks; t++) {
+                                await service.addTask({
+                                    title: getRandomElement(possibleTasks),
+                                    description: `Assigned task for ${role} at ${newEvent.name}`,
+                                    status: Math.random() > 0.5 ? 'done' : 'pending',
+                                    assignedTo: sId,
+                                    eventId: newEvent.id,
+                                    startTime: startDate.toISOString(),
+                                    dueTime: endDate.toISOString(),
+                                    location: template.location,
+                                    isSample: true
+                                });
+                                results.tasks++;
+                            }
+                        }
                     }
                 }
 
@@ -822,6 +852,9 @@ export async function generateSampleData() {
                     role: 'Chef'
                 });
                 results.errors.push(`Created KDS Test Data: Event '${kdsEvent.name}' assigned to '${kdsStaff.name}' (${kdsStaff.email})`);
+                // Move this to a console log or just let the counts speak for themselves
+                console.log(`Created KDS Test Data: Event '${kdsEvent.name}' assigned to '${kdsStaff.name}' (${kdsStaff.email})`);
+                // REMOVED: results.errors.push(...) - This was causing the generic "Error" toast
             } else {
                 results.errors.push(`Created KDS Test Data, but failed to assign staff (method missing)`);
             }
@@ -839,7 +872,7 @@ export async function generateSampleData() {
         revalidatePath('/dashboard/calendar');
         revalidatePath('/dashboard/shifts');
 
-        const successMsg = `Successfully generated: ${results.staff} staff, ${results.clients} clients, ${results.menus} menus, ${results.menuItems} items, ${results.events} events, ${results.availability || 0} availability records, ${results.shifts || 0} shifts`;
+        const successMsg = `Successfully generated: ${results.staff} staff, ${results.clients} clients, ${results.menus} menus, ${results.menuItems} items, ${results.events} events, ${results.tasks} tasks`;
         const errorMsg = results.errors.length > 0
             ? `\n\nEncountered ${results.errors.length} errors. First error: ${results.errors[0]}`
             : '';
