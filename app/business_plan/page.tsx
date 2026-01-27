@@ -179,7 +179,7 @@ export default function BusinessPlanPage() {
                         <li className="mb-10 ml-6">
                             <span className="absolute flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full -left-3 ring-8 ring-white text-blue-800 text-xs font-bold">3</span>
                             <h3 className="mb-1 text-lg font-semibold text-gray-900">Deployment & Customization</h3>
-                            <p class="text-base font-normal text-gray-500">Amir deploys code + 10hrs custom styling/config.</p>
+                            <p className="text-base font-normal text-gray-500">Amir deploys code + 10hrs custom styling/config.</p>
                         </li>
                     </ol>
                 </div>
