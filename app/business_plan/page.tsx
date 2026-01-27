@@ -74,7 +74,8 @@ export default function BusinessPlanPage() {
                         </li>
                         <li className="flex items-start">
                             <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded mt-1">Tech</span>
-                            <div class="text-sm">
+                            <div className="text-sm">
+
                                 <strong className="text-gray-900">Amir's Budget:</strong> Hardware, IDEs, Development tools.
                                 <div className="text-gray-500 text-xs">Paid from Amir's 51% share.</div>
                             </div>
