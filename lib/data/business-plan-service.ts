@@ -36,6 +36,18 @@ export interface BusinessPlanData {
     // Revenue Share Rules (For reference/calc)
     shareAmir: number; // 51
     shareDavid: number; // 49
+
+    // Revenue Strategy
+    revenueStrategy: string;
+
+    // Exit Strategy & Long Term
+    exitSchedule: {
+        year: string;
+        amir: number;
+        david: number;
+        role: string;
+    }[];
+    buyoutClause: string;
 }
 
 export interface BusinessPlanVersion {
@@ -131,6 +143,20 @@ export const DEFAULT_PLAN_DATA: BusinessPlanData = {
     hourlyRate: 150,
     shareAmir: 51,
     shareDavid: 49,
-    monthlyProjections: generateProjections()
+    monthlyProjections: generateProjections(),
+
+    // Default Strategic Content
+    revenueStrategy: "The core profitability beyond the initial sale lies in **Paid Upgrades** (The Feature Crowdfunding Model). When a new feature is requested (e.g. AI Menu Gen), we validate it with the user base. If 40 clients prepay $500, Amir builds it once, and we generate $20k pure profit with zero marginal cost.",
+
+    buyoutClause: "At any point after Year 3, David has the option to buy out the remaining timeline for a lump sum (valuation based on trailing 12-month revenue), subject to the perpetual 5% royalty.",
+
+    exitSchedule: [
+        { year: "Year 1", amir: 51, david: 49, role: "Heavy Active Dev" },
+        { year: "Year 2", amir: 45, david: 55, role: "Maintenance & Feature Upsells" },
+        { year: "Year 3", amir: 35, david: 65, role: "Transitioning to Maintenance" },
+        { year: "Year 4", amir: 20, david: 80, role: "Advisor/Escalation Role" },
+        { year: "Year 5", amir: 10, david: 90, role: "Handover" },
+        { year: "Year 6+", amir: 5, david: 95, role: "Royalty in Perpetuity" }
+    ]
 };
 

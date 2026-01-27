@@ -7,6 +7,7 @@ import { UserSelectionModal } from "@/components/business-plan/UserSelectionModa
 import { InlineEditable } from "@/components/business-plan/InlineEditable";
 import { VersionHistory } from "@/components/business-plan/VersionHistory";
 import { FinancialProjection } from "@/components/business-plan/FinancialProjection";
+import { ExitStrategySection } from "@/components/business-plan/ExitStrategySection";
 import { BusinessPlanService, BusinessPlanData, BusinessPlanVersion, DEFAULT_PLAN_DATA } from "@/lib/data/business-plan-service";
 import { debounce } from "lodash";
 
@@ -205,6 +206,11 @@ export default function BusinessPlanPage() {
                             </li>
                         </ol>
                     </div>
+                </section>
+
+                {/* Section 4: Exit Strategy */}
+                <section className="mb-16">
+                    <ExitStrategySection data={planData} onChange={handleDataChange} />
                 </section>
             </div>
         </div>
