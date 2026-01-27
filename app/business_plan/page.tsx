@@ -28,9 +28,13 @@ export default function BusinessPlanPage() {
 
     const loadLatestPlan = async () => {
         const { latest, history } = await BusinessPlanService.getLatest();
+
+        let merged = { ...DEFAULT_PLAN_DATA };
+
         if (latest && latest.content) {
             // Merge with default to ensure structural integrity if schema changes
-            const merged = { ...DEFAULT_PLAN_DATA, ...latest.content };
+            merged = { ...DEFAULT_PLAN_DATA, ...latest.content };
+
             // Ensure projections array exists and has 5 years
             if (!merged.projections || merged.projections.length < 5) {
                 merged.projections = DEFAULT_PLAN_DATA.projections;
@@ -41,11 +45,16 @@ export default function BusinessPlanPage() {
             if (!merged.salesPitch) {
                 merged.salesPitch = DEFAULT_PLAN_DATA.salesPitch;
             }
-            if (!merged.featurePriceLow) {
-                merged.featurePriceLow = DEFAULT_PLAN_DATA.featurePriceLow;
-                merged.featurePriceHigh = DEFAULT_PLAN_DATA.featurePriceHigh;
-            }
-            setPlanData(merged);
+        }
+
+        // Apply any missing new fields (whether fresh load or merged)
+        if (!merged.featurePriceLow) merged.featurePriceLow = DEFAULT_PLAN_DATA.featurePriceLow;
+        if (!merged.featurePriceHigh) merged.featurePriceHigh = DEFAULT_PLAN_DATA.featurePriceHigh;
+        if (!merged.clientsPerDev) merged.clientsPerDev = DEFAULT_PLAN_DATA.clientsPerDev;
+        if (!merged.devMonthlyCost) merged.devMonthlyCost = DEFAULT_PLAN_DATA.devMonthlyCost;
+
+        setPlanData(merged);
+        if (latest) {
             setLastSaved(new Date(latest.created_at));
         }
         setHistory(history || []);

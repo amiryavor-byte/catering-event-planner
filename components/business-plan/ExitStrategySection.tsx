@@ -49,13 +49,19 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
                 // We'll stick to consistency with FinancialProjection for now to match the table.
 
                 const baseRev = m.clientCount * avgBasePrice;
-                const upgradeRev = (m.clientCount * (m.upgradeAdoption / 100)) * avgFeaturePrice; // Using new Feature Price
+                const upgradeRev = (m.clientCount * (m.upgradeAdoption / 100)) * avgFeaturePrice;
                 const totalRev = baseRev + upgradeRev;
 
-                const expenses = data.hostingCost + (m.month === 1 ? data.serverCost : 0);
+                // Dev Scaling Logic
+                const yearNum = Math.ceil(m.month / 12);
+                const amirCapacity = [1.0, 0.8, 0.5, 0.2, 0.0][Math.min(yearNum - 1, 4)];
+                const devsNeeded = m.clientCount / (data.clientsPerDev || 30);
+                const hiredDevs = Math.max(0, devsNeeded - amirCapacity);
+                const devExpense = hiredDevs * (data.devMonthlyCost || 6000);
+
+                const expenses = data.hostingCost + (m.month === 1 ? data.serverCost : 0) + devExpense;
                 const net = totalRev - expenses;
 
-                revenue += totalRev;
                 profit += net;
             });
 

@@ -18,6 +18,10 @@ export interface BusinessPlanData {
     serverCost: number;
     hourlyRate: number;
 
+    // Dev Scaling Logic
+    clientsPerDev: number;
+    devMonthlyCost: number;
+
     // Projections (Year 1-5) - Stored as array or object
     // Projections (Month 1-60)
     monthlyProjections: {
@@ -156,6 +160,8 @@ export const DEFAULT_PLAN_DATA: BusinessPlanData = {
     hostingCost: 200,
     serverCost: 500,
     hourlyRate: 150,
+    clientsPerDev: 30,    // 1 Dev supports 30 clients
+    devMonthlyCost: 6000, // $6k/mo for outsourced/junior dev
     shareAmir: 51,
     shareDavid: 49,
     monthlyProjections: generateProjections(),
