@@ -37,6 +37,12 @@ export interface BusinessPlanData {
     shareAmir: number; // 51
     shareDavid: number; // 49
 
+    // Operational Workflow (Editable)
+    workflowSteps: {
+        title: string;
+        description: string;
+    }[];
+
     // Revenue Strategy
     revenueStrategy: string;
 
@@ -144,6 +150,13 @@ export const DEFAULT_PLAN_DATA: BusinessPlanData = {
     shareAmir: 51,
     shareDavid: 49,
     monthlyProjections: generateProjections(),
+
+    workflowSteps: [
+        { title: "Lead Generation & Sale", description: "David secures client deposit + signed contract." },
+        { title: "Hand-off to Technical", description: "David provides domain details & assets to Amir via portal." },
+        { title: "Deployment & Customization", description: "Amir deploys code + 10hrs custom styling/config." },
+        { title: "Training & Launch", description: "David performs final client training and handover." }
+    ],
 
     // Default Strategic Content
     revenueStrategy: "The core profitability beyond the initial sale lies in **Paid Upgrades** (The Feature Crowdfunding Model). When a new feature is requested (e.g. AI Menu Gen), we validate it with the user base. If 40 clients prepay $500, Amir builds it once, and we generate $20k pure profit with zero marginal cost.",

@@ -8,6 +8,7 @@ import { InlineEditable } from "@/components/business-plan/InlineEditable";
 import { VersionHistory } from "@/components/business-plan/VersionHistory";
 import { FinancialProjection } from "@/components/business-plan/FinancialProjection";
 import { ExitStrategySection } from "@/components/business-plan/ExitStrategySection";
+import { WorkflowSection } from "@/components/business-plan/WorkflowSection";
 import { BusinessPlanService, BusinessPlanData, BusinessPlanVersion, DEFAULT_PLAN_DATA } from "@/lib/data/business-plan-service";
 import { debounce } from "lodash";
 
@@ -32,6 +33,9 @@ export default function BusinessPlanPage() {
             // Ensure projections array exists and has 5 years
             if (!merged.projections || merged.projections.length < 5) {
                 merged.projections = DEFAULT_PLAN_DATA.projections;
+            }
+            if (!merged.workflowSteps) {
+                merged.workflowSteps = DEFAULT_PLAN_DATA.workflowSteps;
             }
             setPlanData(merged);
             setLastSaved(new Date(latest.created_at));
@@ -175,37 +179,8 @@ export default function BusinessPlanPage() {
                 </section>
 
                 {/* Section 3: Operational Workflow */}
-                <section className="mb-16 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-8 pb-4 border-b-2 border-purple-100 flex items-center">
-                        <span className="bg-purple-100 text-purple-600 rounded-full w-10 h-10 flex items-center justify-center mr-4 text-xl">3</span>
-                        Operational Workflow
-                    </h2>
-
-                    <div className="relative">
-                        <div className="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-200"></div>
-                        <ol className="relative space-y-10 pl-2">
-                            <li className="mb-10 ml-6">
-                                <span className="absolute flex items-center justify-center w-6 h-6 bg-purple-100 rounded-full -left-3 ring-8 ring-white text-purple-800 text-xs font-bold">1</span>
-                                <h3 className="mb-1 text-lg font-semibold text-gray-900">Lead Generation & Sale</h3>
-                                <p className="text-base font-normal text-gray-500">David secures client deposit + signed contract.</p>
-                            </li>
-                            <li className="mb-10 ml-6">
-                                <span className="absolute flex items-center justify-center w-6 h-6 bg-purple-100 rounded-full -left-3 ring-8 ring-white text-purple-800 text-xs font-bold">2</span>
-                                <h3 className="mb-1 text-lg font-semibold text-gray-900">Hand-off to Technical</h3>
-                                <p className="text-base font-normal text-gray-500">David provides domain details & assets to Amir via portal.</p>
-                            </li>
-                            <li className="mb-10 ml-6">
-                                <span className="absolute flex items-center justify-center w-6 h-6 bg-purple-100 rounded-full -left-3 ring-8 ring-white text-purple-800 text-xs font-bold">3</span>
-                                <h3 className="mb-1 text-lg font-semibold text-gray-900">Deployment & Customization</h3>
-                                <p className="text-base font-normal text-gray-500">Amir deploys code + 10hrs custom styling/config.</p>
-                            </li>
-                            <li className="ml-6">
-                                <span className="absolute flex items-center justify-center w-6 h-6 bg-purple-100 rounded-full -left-3 ring-8 ring-white text-purple-800 text-xs font-bold">4</span>
-                                <h3 className="mb-1 text-lg font-semibold text-gray-900">Training & Launch</h3>
-                                <p className="text-base font-normal text-gray-500">David performs final client training and handover.</p>
-                            </li>
-                        </ol>
-                    </div>
+                <section className="mb-16">
+                    <WorkflowSection data={planData} onChange={handleDataChange} />
                 </section>
 
                 {/* Section 4: Exit Strategy */}
