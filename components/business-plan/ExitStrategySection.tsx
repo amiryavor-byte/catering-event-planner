@@ -4,6 +4,7 @@
 import { BusinessPlanData } from '@/lib/data/business-plan-service';
 import { InlineEditable } from './InlineEditable';
 import { useState } from 'react';
+import { OwnershipChart } from './OwnershipChart';
 
 interface ExitStrategySectionProps {
     data: BusinessPlanData;
@@ -14,7 +15,7 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
 
     // --- Helper Calculations ---
     const calculateYearlyGenerals = () => {
-        const yearlyData: { year: number; revenue: number; profit: number; amirEarnings: number; amirSharePct: number }[] = [];
+        const yearlyData: { year: number; revenue: number; profit: number; amirEarnings: number; davidEarnings: number; amirSharePct: number }[] = [];
 
         // Group by year (every 12 months)
         for (let y = 0; y < 5; y++) {
@@ -28,6 +29,7 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
             // Get Amir's share % from the schedule for this year
             const scheduleRow = data.exitSchedule?.find(s => s.year.includes((y + 1).toString()));
             const amirPct = scheduleRow ? scheduleRow.amir : 0;
+            const davidPct = scheduleRow ? scheduleRow.david : 0;
 
             yearMonths.forEach(m => {
                 const avgBasePrice = (data.basePriceLow + data.basePriceHigh) / 2;
@@ -59,9 +61,10 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
 
             yearlyData.push({
                 year: y + 1,
-                revenue,
+                revenue: 0, // Not used here
                 profit,
                 amirEarnings: profit * (amirPct / 100),
+                davidEarnings: profit * (davidPct / 100),
                 amirSharePct: amirPct
             });
         }
@@ -86,7 +89,7 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
             </h2>
 
             {/* Pricing Config Row */}
-            <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-8 bg-gray-50 p-6 rounded-xl border border-gray-200">
+            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-8 bg-gray-50 p-6 rounded-xl border border-gray-200">
                 <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Likely Setup Fee Range</label>
                     <div className="flex items-center gap-2 text-lg font-bold text-gray-800">
@@ -103,6 +106,13 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
                         $<InlineEditable value={(data.featurePriceHigh || 1500).toString()} onSave={(v) => onChange({ ...data, featurePriceHigh: Number(v) })} />
                     </div>
                 </div>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    📊 Profit Share Projection
+                </h3>
+                <OwnershipChart data={yearlyStats} />
             </div>
 
             <div className="grid md:grid-cols-2 gap-12 mb-12">
@@ -141,11 +151,12 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
                     <table className="min-w-full text-sm text-left">
                         <thead className="bg-gray-800 text-white rounded-t-lg">
                             <tr>
-                                <th className="px-6 py-3 rounded-tl-lg">Timeline</th>
-                                <th className="px-6 py-3">Amir's Share %</th>
-                                <th className="px-6 py-3">Proj. Annual Earnings</th>
-                                <th className="px-6 py-3">David's Share %</th>
-                                <th className="px-6 py-3 rounded-tr-lg">Amir's Role Context</th>
+                                <th className="px-4 py-3 rounded-tl-lg">Timeline</th>
+                                <th className="px-4 py-3 bg-blue-900/50">Amir %</th>
+                                <th className="px-4 py-3 bg-blue-900/30">Proj. Earnings</th>
+                                <th className="px-4 py-3 bg-green-900/50">David %</th>
+                                <th className="px-4 py-3 bg-green-900/30">Proj. Earnings</th>
+                                <th className="px-4 py-3 rounded-tr-lg">Amir's Role Context</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y border-x border-b border-gray-200">
@@ -154,11 +165,12 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
                                 const yearNum = parseInt(row.year.replace(/\D/g, '')) || (i + 1);
                                 const stats = yearlyStats.find(y => y.year === yearNum);
                                 const amirEarnings = stats ? stats.amirEarnings : 0;
+                                const davidEarnings = stats ? stats.davidEarnings : 0;
 
                                 return (
                                     <tr key={i} className="hover:bg-gray-50 group">
-                                        <td className="px-6 py-4 font-bold text-gray-900">{row.year}</td>
-                                        <td className="px-6 py-4 font-medium text-blue-700">
+                                        <td className="px-4 py-4 font-bold text-gray-900">{row.year}</td>
+                                        <td className="px-4 py-4 font-medium text-blue-700">
                                             <div className="flex items-center gap-1">
                                                 <InlineEditable
                                                     value={row.amir.toString()}
@@ -166,14 +178,13 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
                                                 />%
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 font-bold text-green-700 bg-green-50/30 relative group-hover:bg-green-100 transition-colors cursor-pointer"
+                                        <td className="px-4 py-4 font-bold text-blue-800 bg-blue-50/50 relative group-hover:bg-blue-100 transition-colors cursor-pointer"
                                             title="Click to calculate required sales (Goal Seek)"
                                             onClick={() => setGoalSeekOpen({ year: yearNum, current: Math.round(amirEarnings) })}
                                         >
                                             ${Math.round(amirEarnings).toLocaleString()}
-                                            <span className="opacity-0 group-hover:opacity-100 absolute right-2 top-1/2 -translate-y-1/2 text-xs bg-green-200 text-green-800 px-1 rounded">🎯 Goal?</span>
                                         </td>
-                                        <td className="px-6 py-4 font-medium text-gray-600">
+                                        <td className="px-4 py-4 font-medium text-green-700">
                                             <div className="flex items-center gap-1">
                                                 <InlineEditable
                                                     value={row.david.toString()}
@@ -181,7 +192,10 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
                                                 />%
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-500 italic">
+                                        <td className="px-4 py-4 font-bold text-green-800 bg-green-50/50">
+                                            ${Math.round(davidEarnings).toLocaleString()}
+                                        </td>
+                                        <td className="px-4 py-4 text-gray-500 italic text-xs">
                                             <InlineEditable
                                                 value={row.role}
                                                 onSave={(v) => updateSchedule(i, 'role', v)}
@@ -190,6 +204,16 @@ export function ExitStrategySection({ data, onChange }: ExitStrategySectionProps
                                     </tr>
                                 )
                             })}
+                            <tr className="bg-yellow-50 border-t-2 border-yellow-200">
+                                <td className="px-4 py-4 font-bold text-gray-900">Year 6+</td>
+                                <td className="px-4 py-4 font-bold text-blue-700">5%</td>
+                                <td className="px-4 py-4 text-gray-500 italic">Perpetual</td>
+                                <td className="px-4 py-4 font-bold text-green-700">95%</td>
+                                <td className="px-4 py-4 text-gray-500 italic">Perpetual</td>
+                                <td className="px-4 py-4 text-gray-600 font-medium text-xs">
+                                    Royalty continues indefinitely as long as David sells the software.
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
