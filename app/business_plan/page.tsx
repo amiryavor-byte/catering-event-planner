@@ -41,6 +41,10 @@ export default function BusinessPlanPage() {
             if (!merged.salesPitch) {
                 merged.salesPitch = DEFAULT_PLAN_DATA.salesPitch;
             }
+            if (!merged.featurePriceLow) {
+                merged.featurePriceLow = DEFAULT_PLAN_DATA.featurePriceLow;
+                merged.featurePriceHigh = DEFAULT_PLAN_DATA.featurePriceHigh;
+            }
             setPlanData(merged);
             setLastSaved(new Date(latest.created_at));
         }

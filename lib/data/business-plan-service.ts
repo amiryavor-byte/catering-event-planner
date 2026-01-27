@@ -12,6 +12,8 @@ export interface BusinessPlanData {
     // Financials - Variables are stored here for auto-calc
     basePriceLow: number;
     basePriceHigh: number;
+    featurePriceLow: number;  // New
+    featurePriceHigh: number; // New
     hostingCost: number;
     serverCost: number;
     hourlyRate: number;
@@ -148,6 +150,8 @@ export const DEFAULT_PLAN_DATA: BusinessPlanData = {
     davidRole: "Sales Co-Founder (Lead Gen, Sales, Client Relations)",
     basePriceLow: 3000,
     basePriceHigh: 5000,
+    featurePriceLow: 500,  // Default
+    featurePriceHigh: 1500, // Default
     hostingCost: 200,
     serverCost: 500,
     hourlyRate: 150,
