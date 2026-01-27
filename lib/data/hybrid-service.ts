@@ -334,22 +334,25 @@ export class HybridDataService implements IDataService {
     async clearAllData(): Promise<void> {
         // Only clear local data as requested
         console.log('🧹 Clearing local sample data only...');
-        await this.sqlite.clearAllData();
+        await this.sqlite.clearAllData?.();
     }
+
 
     async clearSampleData(): Promise<void> {
         console.log('🧹 Clearing sample data (Local & API)...');
         await Promise.all([
-            this.sqlite.clearSampleData(),
-            this.api.clearSampleData().catch(e => console.warn("API clearSampleData failed:", e))
+            this.sqlite.clearSampleData?.(),
+            this.api.clearSampleData?.()?.catch((e: unknown) => console.warn("API clearSampleData failed:", e))
         ]);
     }
 
+
     async getDataStats(): Promise<any> {
         const [apiStats, localStats] = await Promise.all([
-            this.api.getDataStats(),
-            this.sqlite.getDataStats()
+            this.api.getDataStats?.() || Promise.resolve({} as any),
+            this.sqlite.getDataStats?.() || Promise.resolve({} as any)
         ]);
+
 
         // Combine stats
         return {
