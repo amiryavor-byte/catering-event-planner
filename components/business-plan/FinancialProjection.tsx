@@ -3,6 +3,7 @@
 
 import { BusinessPlanData } from '@/lib/data/business-plan-service';
 import { InlineEditable } from './InlineEditable';
+import { useState } from 'react';
 
 interface FinancialProjectionProps {
     data: BusinessPlanData;
@@ -10,14 +11,18 @@ interface FinancialProjectionProps {
 }
 
 export function FinancialProjection({ data, onChange }: FinancialProjectionProps) {
+    const [expanded, setExpanded] = useState(false);
 
-    const updateProjection = (index: number, field: keyof typeof data.projections[0], value: number) => {
-        const newProjections = [...data.projections];
+    // If migrating from old data structure, safe guard
+    const projections = data.monthlyProjections || [];
+
+    const updateProjection = (index: number, field: keyof typeof projections[0], value: number) => {
+        const newProjections = [...projections];
         newProjections[index] = {
             ...newProjections[index],
             [field]: value
         };
-        onChange({ ...data, projections: newProjections });
+        onChange({ ...data, monthlyProjections: newProjections });
     };
 
     const updateGlobal = (field: keyof BusinessPlanData, value: number) => {
@@ -25,8 +30,7 @@ export function FinancialProjection({ data, onChange }: FinancialProjectionProps
     };
 
     // Calculations
-    const calculateRow = (p: typeof data.projections[0]) => {
-        // Simple Average Base Price for estimation
+    const calculateRow = (p: typeof projections[0]) => {
         const avgBasePrice = (data.basePriceLow + data.basePriceHigh) / 2;
 
         const baseRevenue = p.clientCount * avgBasePrice;
@@ -34,14 +38,10 @@ export function FinancialProjection({ data, onChange }: FinancialProjectionProps
 
         const totalRevenue = baseRevenue + upgradeRevenue;
 
-        // Expenses
-        const annualHosting = (data.hostingCost * 12); // Assuming monthly input
-        // Server cost is one-time usually, but let's amortize or just subtract from year 1?
-        // For simplicity: Annual Expenses = Hosting * 12 * Clients (if per client) or just fixed?
-        // Let's assume Hosting Cost is global total per month for simplicity of this model, or per client?
-        // "Hosting Cost: $200" usually implies total infrastructure.
-        // Let's stick to total.
-        const totalExpenses = annualHosting + (p.year === 1 ? data.serverCost : 0);
+        // Expenses (Monthly Hosting + One-time Server Cost in Month 1)
+        const monthlyHosting = data.hostingCost;
+        const serverCost = p.month === 1 ? data.serverCost : 0;
+        const totalExpenses = monthlyHosting + serverCost;
 
         const netProfit = totalRevenue - totalExpenses;
 
@@ -51,7 +51,8 @@ export function FinancialProjection({ data, onChange }: FinancialProjectionProps
         return { totalRevenue, totalExpenses, netProfit, amirShare, davidShare };
     };
 
-    const grandTotal = data.projections.reduce((acc, p) => {
+    // 5-Year Aggregates
+    const grandTotal = projections.reduce((acc, p) => {
         const row = calculateRow(p);
         return {
             revenue: acc.revenue + row.totalRevenue,
@@ -61,6 +62,7 @@ export function FinancialProjection({ data, onChange }: FinancialProjectionProps
         };
     }, { revenue: 0, profit: 0, amir: 0, david: 0 });
 
+    const visibleProjections = expanded ? projections : projections.slice(0, 6);
 
     return (
         <div className="overflow-x-auto">
@@ -92,56 +94,78 @@ export function FinancialProjection({ data, onChange }: FinancialProjectionProps
                 </div>
             </div>
 
-            <table className="min-w-full text-sm text-left">
-                <thead className="bg-gray-100 text-gray-600 font-semibold">
-                    <tr>
-                        <th className="px-4 py-2">Year</th>
-                        <th className="px-4 py-2">Clients</th>
-                        <th className="px-4 py-2">Upgrade %</th>
-                        <th className="px-4 py-2">Revenue</th>
-                        <th className="px-4 py-2">Exp</th>
-                        <th className="px-4 py-2 bg-green-50">Net Profit</th>
-                        <th className="px-4 py-2 bg-blue-50">Amir ({data.shareAmir}%)</th>
-                        <th className="px-4 py-2 bg-green-50">David ({data.shareDavid}%)</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y">
-                    {data.projections.map((p, i) => {
-                        const calcs = calculateRow(p);
-                        return (
-                            <tr key={p.year} className="hover:bg-gray-50">
-                                <td className="px-4 py-2 font-medium">Year {p.year}</td>
-                                <td className="px-4 py-2">
-                                    <InlineEditable
-                                        value={p.clientCount.toString()}
-                                        onSave={(v) => updateProjection(i, 'clientCount', Number(v))}
-                                        className="font-bold text-blue-600"
-                                    />
-                                </td>
-                                <td className="px-4 py-2">
-                                    <InlineEditable
-                                        value={p.upgradeAdoption.toString()}
-                                        onSave={(v) => updateProjection(i, 'upgradeAdoption', Number(v))}
-                                    />%
-                                </td>
-                                <td className="px-4 py-2 text-gray-600">${calcs.totalRevenue.toLocaleString()}</td>
-                                <td className="px-4 py-2 text-red-400">-${calcs.totalExpenses.toLocaleString()}</td>
-                                <td className="px-4 py-2 font-bold text-green-700 bg-green-50/50">${calcs.netProfit.toLocaleString()}</td>
-                                <td className="px-4 py-2 font-medium text-blue-700 bg-blue-50/50">${calcs.amirShare.toLocaleString()}</td>
-                                <td className="px-4 py-2 font-medium text-green-700 bg-green-50/50">${calcs.davidShare.toLocaleString()}</td>
-                            </tr>
-                        );
-                    })}
-                    <tr className="bg-gray-100 font-bold border-t-2 border-gray-200">
-                        <td className="px-4 py-3" colSpan={3}>5-Year Total</td>
-                        <td className="px-4 py-3">${grandTotal.revenue.toLocaleString()}</td>
-                        <td className="px-4 py-3"></td>
-                        <td className="px-4 py-3 text-green-800">${grandTotal.profit.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-blue-800">${grandTotal.amir.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-green-800">${grandTotal.david.toLocaleString()}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div className="relative">
+                <table className="min-w-full text-sm text-left">
+                    <thead className="bg-gray-100 text-gray-600 font-semibold sticky top-0 z-10">
+                        <tr>
+                            <th className="px-4 py-2">Month</th>
+                            <th className="px-4 py-2">Clients</th>
+                            <th className="px-4 py-2">Upgrade %</th>
+                            <th className="px-4 py-2">Revenue</th>
+                            <th className="px-4 py-2">Exp</th>
+                            <th className="px-4 py-2 bg-green-50">Net Profit</th>
+                            <th className="px-4 py-2 bg-blue-50">Amir ({data.shareAmir}%)</th>
+                            <th className="px-4 py-2 bg-green-50">David ({data.shareDavid}%)</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y relative">
+                        {visibleProjections.map((p, i) => {
+                            const calcs = calculateRow(p);
+                            const isYearMarker = p.month % 12 === 0;
+                            return (
+                                <tr key={p.month} className={`hover:bg-gray-50 ${isYearMarker ? 'border-b-2 border-gray-300 bg-gray-50/50' : ''}`}>
+                                    <td className="px-4 py-2 font-medium break-keep whitespace-nowrap">
+                                        Month {p.month} {isYearMarker && <span className="text-xs font-bold text-gray-400 ml-1">(Yr {p.month / 12})</span>}
+                                    </td>
+                                    <td className="px-4 py-2">
+                                        <InlineEditable
+                                            value={p.clientCount.toString()}
+                                            onSave={(v) => updateProjection(i, 'clientCount', Number(v))}
+                                            className="font-bold text-blue-600"
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2">
+                                        <InlineEditable
+                                            value={p.upgradeAdoption.toString()}
+                                            onSave={(v) => updateProjection(i, 'upgradeAdoption', Number(v))}
+                                        />%
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-600">${calcs.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                    <td className="px-4 py-2 text-red-400">-${calcs.totalExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                    <td className="px-4 py-2 font-bold text-green-700 bg-green-50/30">${calcs.netProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                    <td className="px-4 py-2 font-medium text-blue-700 bg-blue-50/30">${calcs.amirShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                    <td className="px-4 py-2 font-medium text-green-700 bg-green-50/30">${calcs.davidShare.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                    <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-300">
+                        <tr>
+                            <td className="px-4 py-3" colSpan={3}>5-Year Total (60 Months)</td>
+                            <td className="px-4 py-3">${grandTotal.revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                            <td className="px-4 py-3"></td>
+                            <td className="px-4 py-3 text-green-800">${grandTotal.profit.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                            <td className="px-4 py-3 text-blue-800">${grandTotal.amir.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                            <td className="px-4 py-3 text-green-800">${grandTotal.david.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                {!expanded && (
+                    <div className="absolute bottom-[60px] left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none flex items-end justify-center pb-4">
+                        {/* Gradient overlay */}
+                    </div>
+                )}
+            </div>
+
+            <div className="mt-4 text-center">
+                <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="px-6 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-full font-semibold transition-colors shadow-sm"
+                >
+                    {expanded ? "Show Less (First 6 Months)" : "Expand Full 5-Year Projection (60 Months)"}
+                </button>
+            </div>
         </div>
     );
 }

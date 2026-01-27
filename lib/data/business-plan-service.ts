@@ -17,10 +17,19 @@ export interface BusinessPlanData {
     hourlyRate: number;
 
     // Projections (Year 1-5) - Stored as array or object
-    projections: {
-        year: number;
+    // Projections (Month 1-60)
+    monthlyProjections: {
+        month: number;
         clientCount: number;
         upgradeAdoption: number; // %
+        upgradePrice: number;
+    }[];
+
+    // Legacy (Year 1-5) - Optional for migration
+    projections?: {
+        year: number;
+        clientCount: number;
+        upgradeAdoption: number;
         upgradePrice: number;
     }[];
 
@@ -88,22 +97,40 @@ export const BusinessPlanService = {
     }
 };
 
+// Exponential Growth Generator: Start 3, End ~70 in Year 5 (Month 60)
+// Formula: y = a * (1 + r)^x
+// 70 = 3 * (1 + r)^60 => 23.33 = (1+r)^60 => ln(23.33) = 60 * ln(1+r)
+const generateProjections = () => {
+    const startClients = 3;
+    const endClients = 70; // Target for year 5
+    const months = 60;
+    const growthRate = Math.pow(endClients / startClients, 1 / months) - 1;
+
+    return Array.from({ length: months }, (_, i) => {
+        const month = i + 1;
+        // Exponential growth formula
+        const clientCount = Math.round(startClients * Math.pow(1 + growthRate, i));
+
+        return {
+            month,
+            clientCount,
+            upgradeAdoption: Math.min(70, Math.floor(i * 1.2)), // Gradual adoption ramp
+            upgradePrice: 500
+        };
+    });
+};
+
 export const DEFAULT_PLAN_DATA: BusinessPlanData = {
     missionStatement: "To revolutionize catering event management with a premium, self-hosted, technical partnership.",
     amirRole: "Technical Co-Founder (Product Development, Deployment, Customization)",
     davidRole: "Sales Co-Founder (Lead Gen, Sales, Client Relations)",
     basePriceLow: 3000,
     basePriceHigh: 5000,
-    hostingCost: 200, // Monthly estimates? or annual?
-    serverCost: 500, // One time?
+    hostingCost: 200,
+    serverCost: 500,
     hourlyRate: 150,
     shareAmir: 51,
     shareDavid: 49,
-    projections: [
-        { year: 1, clientCount: 10, upgradeAdoption: 0, upgradePrice: 500 },
-        { year: 2, clientCount: 20, upgradeAdoption: 20, upgradePrice: 500 },
-        { year: 3, clientCount: 35, upgradeAdoption: 40, upgradePrice: 500 },
-        { year: 4, clientCount: 50, upgradeAdoption: 60, upgradePrice: 600 },
-        { year: 5, clientCount: 70, upgradeAdoption: 70, upgradePrice: 700 }
-    ]
+    monthlyProjections: generateProjections()
 };
+
