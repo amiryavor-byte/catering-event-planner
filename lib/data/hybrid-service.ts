@@ -227,6 +227,23 @@ export class HybridDataService implements IDataService {
         return this.api.addEventMenuItem(data);
     }
 
+    async updateEventMenuItem(id: number, data: Partial<EventMenuItem>): Promise<void> {
+        if (id < 0) {
+            await (this.sqlite as any).updateEventMenuItem(this.toOriginalId(id), data);
+        } else {
+            await this.api.updateEventMenuItem(id, data);
+        }
+    }
+
+    async deleteEventMenuItem(id: number): Promise<void> {
+        if (id < 0) {
+            await (this.sqlite as any).deleteEventMenuItem(this.toOriginalId(id));
+        } else {
+            await this.api.deleteEventMenuItem(id);
+        }
+    }
+
+
     // Menus
     async getMenus(): Promise<Menu[]> {
         const [apiData, localData] = await Promise.all([
@@ -535,6 +552,19 @@ export class HybridDataService implements IDataService {
         }
         return this.api.getEventStaff(eventId);
     }
+
+    async addEventStaff(data: { eventId: number; userId: number; role?: string; shiftStart?: string; shiftEnd?: string }): Promise<void> {
+        if (data.eventId < 0) {
+            await (this.sqlite as any).addEventStaff({
+                ...data,
+                eventId: this.toOriginalId(data.eventId),
+                userId: this.toOriginalId(data.userId)
+            });
+        } else {
+            await this.api.addEventStaff(data);
+        }
+    }
+
 
     async getEventEquipment(eventId: number): Promise<any[]> {
         if (eventId < 0) {
