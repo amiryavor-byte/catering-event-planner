@@ -1,7 +1,7 @@
 
 "use client";
 
-import { BusinessPlanData } from '@/lib/data/business-plan-service';
+import { BusinessPlanData, calculateExponentialGrowth } from '@/lib/data/business-plan-service';
 import { InlineEditable } from './InlineEditable';
 import { useState } from 'react';
 
@@ -64,6 +64,21 @@ export function FinancialProjection({ data, onChange }: FinancialProjectionProps
 
     const visibleProjections = expanded ? projections : projections.slice(0, 6);
 
+    const simulateGrowth = (delta: number) => {
+        const currentStart = projections[0]?.clientCount || 3;
+        const currentEnd = projections[projections.length - 1]?.clientCount || 70;
+        const newEnd = Math.max(currentStart, currentEnd + delta);
+
+        const newCurve = calculateExponentialGrowth(currentStart, newEnd, 60);
+
+        const newProjections = projections.map((p, i) => ({
+            ...p,
+            clientCount: newCurve[i].clientCount
+        }));
+
+        onChange({ ...data, monthlyProjections: newProjections });
+    };
+
     return (
         <div className="overflow-x-auto">
             <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
@@ -77,6 +92,34 @@ export function FinancialProjection({ data, onChange }: FinancialProjectionProps
                     <span className="text-xs text-gray-500 font-semibold uppercase">Base Price (High)</span>
                     <div className="flex items-center text-green-700 font-bold text-lg">
                         $<InlineEditable value={data.basePriceHigh.toString()} onSave={(v) => updateGlobal('basePriceHigh', Number(v))} />
+                    </div>
+
+                    {/* Growth Simulator Controls */}
+                    <div className="mb-6 bg-indigo-50 border border-indigo-100 p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">📈</span>
+                            <div>
+                                <h4 className="font-bold text-indigo-900 text-sm uppercase tracking-wide">Growth Simulator</h4>
+                                <p className="text-xs text-indigo-700">Adjust the 5-Year Target (Current: <span className="font-bold">{projections[59]?.clientCount || 0} Clients</span>)</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => simulateGrowth(-5)}
+                                className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-100 font-bold transition-colors shadow-sm"
+                                title="Reduce Year 5 Target by 5"
+                            >
+                                - Slower
+                            </button>
+                            <button
+                                onClick={() => simulateGrowth(5)}
+                                className="px-4 py-2 bg-indigo-600 border border-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold transition-colors shadow-md flex items-center gap-2"
+                                title="Increase Year 5 Target by 5"
+                            >
+                                <span>Faster Growth</span>
+                                <span className="text-indigo-200 text-xs">(+5)</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div>

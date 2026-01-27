@@ -124,25 +124,26 @@ export const BusinessPlanService = {
 // Exponential Growth Generator: Start 3, End ~70 in Year 5 (Month 60)
 // Formula: y = a * (1 + r)^x
 // 70 = 3 * (1 + r)^60 => 23.33 = (1+r)^60 => ln(23.33) = 60 * ln(1+r)
-const generateProjections = () => {
-    const startClients = 3;
-    const endClients = 70; // Target for year 5
-    const months = 60;
-    const growthRate = Math.pow(endClients / startClients, 1 / months) - 1;
+export const calculateExponentialGrowth = (start: number, end: number, months: number = 60) => {
+    // Avoid division by zero or log of zero if start is 0
+    const safeStart = Math.max(1, start);
+    const growthRate = Math.pow(end / safeStart, 1 / months) - 1;
 
     return Array.from({ length: months }, (_, i) => {
         const month = i + 1;
         // Exponential growth formula
-        const clientCount = Math.round(startClients * Math.pow(1 + growthRate, i));
+        const clientCount = Math.round(safeStart * Math.pow(1 + growthRate, i));
 
         return {
             month,
             clientCount,
-            upgradeAdoption: Math.min(70, Math.floor(i * 1.2)), // Gradual adoption ramp
-            upgradePrice: 500
+            upgradeAdoption: Math.min(70, Math.floor(i * 1.2)), // Gradual adoption ramp default
+            upgradePrice: 500 // Default placeholder, will be preserved/overwritten by UI state usually
         };
     });
 };
+
+const generateProjections = () => calculateExponentialGrowth(3, 70, 60);
 
 export const DEFAULT_PLAN_DATA: BusinessPlanData = {
     missionStatement: "To revolutionize catering event management with a premium, self-hosted, technical partnership.",
