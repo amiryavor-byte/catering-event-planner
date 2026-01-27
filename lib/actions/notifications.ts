@@ -5,8 +5,17 @@ import { sendEmail } from "@/lib/services/email";
 // STUBBED FOR PRODUCTION TO PREVENT VERCEL 500 ERROR (SQLite dependency)
 // TODO: Implement API endpoints for notifications
 
+export interface NotificationActivity {
+    id: number;
+    title: string;
+    message: string;
+    type: 'info' | 'warning' | 'success' | 'error';
+    createdAt: string;
+    link?: string | null;
+}
+
 export async function getUnreadNotifications(userId: number) {
-    return [];
+    return [] as NotificationActivity[];
 }
 
 export async function markNotificationAsRead(notificationId: number) {
@@ -26,6 +35,6 @@ export async function sendEventSchedule(eventId: number) {
 
 export async function getDashboardActivities(limit = 5) {
     // Return empty array to prevent dashboard crash
-    return [];
+    return [] as NotificationActivity[];
 }
 
